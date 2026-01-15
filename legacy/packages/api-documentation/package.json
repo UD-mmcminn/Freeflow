@@ -1,5 +1,5 @@
 {
-    "name": "flowise-api",
+    "name": "@flowise-legacy/api-documentation",
     "version": "1.0.3",
     "description": "Flowise API documentation server",
     "scripts": {

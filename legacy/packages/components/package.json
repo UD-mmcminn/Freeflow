@@ -1,5 +1,5 @@
 {
-    "name": "flowise-components",
+    "name": "@flowise-legacy/components",
     "version": "3.0.12",
     "description": "Flowiseai Components",
     "main": "dist/src/index",

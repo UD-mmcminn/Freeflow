@@ -348,16 +348,20 @@ export class App {
         // Serve UI static
         // ----------------------------------------
 
-        const packagePath = getNodeModulesPackagePath('flowise-ui')
-        const uiBuildPath = path.join(packagePath, 'build')
-        const uiHtmlPath = path.join(packagePath, 'build', 'index.html')
+        const packagePath = getNodeModulesPackagePath('@flowise-legacy/ui') || getNodeModulesPackagePath('flowise-ui')
+        if (!packagePath) {
+            logger.error('UI package not found. Please ensure @flowise-legacy/ui is installed and built.')
+        } else {
+            const uiBuildPath = path.join(packagePath, 'build')
+            const uiHtmlPath = path.resolve(packagePath, 'build', 'index.html')
 
-        this.app.use('/', express.static(uiBuildPath))
+            this.app.use('/', express.static(uiBuildPath))
 
-        // All other requests not handled will return React app
-        this.app.use((req: Request, res: Response) => {
-            res.sendFile(uiHtmlPath)
-        })
+            // All other requests not handled will return React app
+            this.app.use((req: Request, res: Response) => {
+                res.sendFile(uiHtmlPath)
+            })
+        }
 
         // Error handling
         this.app.use(errorHandlerMiddleware)

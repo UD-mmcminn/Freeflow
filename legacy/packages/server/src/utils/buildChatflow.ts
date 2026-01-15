@@ -661,12 +661,12 @@ export const executeFlow = async ({
 
             if (agentflow.followUpPrompts) {
                 const followUpPromptsConfig = JSON.parse(agentflow.followUpPrompts)
-                const generatedFollowUpPrompts = await generateFollowUpPrompts(followUpPromptsConfig, apiMessage.content, {
+                const generatedFollowUpPrompts = (await generateFollowUpPrompts(followUpPromptsConfig, apiMessage.content, {
                     chatId,
                     chatflowid: agentflow.id,
                     appDataSource,
                     databaseEntities
-                })
+                })) as { questions: string[] } | undefined
                 if (generatedFollowUpPrompts?.questions) {
                     apiMessage.followUpPrompts = JSON.stringify(generatedFollowUpPrompts.questions)
                 }
@@ -873,12 +873,12 @@ export const executeFlow = async ({
         if (result?.artifacts) apiMessage.artifacts = JSON.stringify(result.artifacts)
         if (chatflow.followUpPrompts) {
             const followUpPromptsConfig = JSON.parse(chatflow.followUpPrompts)
-            const followUpPrompts = await generateFollowUpPrompts(followUpPromptsConfig, apiMessage.content, {
+            const followUpPrompts = (await generateFollowUpPrompts(followUpPromptsConfig, apiMessage.content, {
                 chatId,
                 chatflowid,
                 appDataSource,
                 databaseEntities
-            })
+            })) as { questions: string[] } | undefined
             if (followUpPrompts?.questions) {
                 apiMessage.followUpPrompts = JSON.stringify(followUpPrompts.questions)
             }
