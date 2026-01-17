@@ -1,7 +1,5 @@
 FROM mcr.microsoft.com/devcontainers/javascript-node:20
 
-ARG USERNAME=vscode
-
 # Native build deps + headless browser/canvas requirements
 RUN apt-get update \
     && DEBIAN_FRONTEND=noninteractive apt-get install -y --no-install-recommends \
@@ -26,8 +24,8 @@ ENV PUPPETEER_SKIP_DOWNLOAD=true
 ENV PUPPETEER_EXECUTABLE_PATH=/usr/bin/chromium
 ENV NODE_OPTIONS=--max-old-space-size=8192
 
-# Ensure pnpm cache dirs are writable by the dev user
-RUN mkdir -p /home/${USERNAME}/.local/share/pnpm \
-    && chown -R ${USERNAME}:${USERNAME} /home/${USERNAME}/.local/share
+# Ensure pnpm cache dirs are writable by the dev user (base image ships with node user)
+RUN mkdir -p /home/node/.local/share/pnpm \
+    && chown -R node:node /home/node/.local/share
 
-USER ${USERNAME}
+USER node

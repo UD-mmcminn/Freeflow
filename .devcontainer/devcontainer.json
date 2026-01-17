@@ -3,7 +3,7 @@
     "build": {
         "dockerfile": "Dockerfile"
     },
-    "remoteUser": "vscode",
+    "remoteUser": "node",
     "init": true,
     "postCreateCommand": "corepack enable && pnpm install",
     "forwardPorts": [3000, 8080, 5173],
@@ -31,6 +31,6 @@
         }
     },
     "mounts": [
-        "source=flowise-pnpm-store,target=/home/vscode/.local/share/pnpm/store,type=volume,uid=1000,gid=1000"
+        "source=flowise-pnpm-store,target=/home/node/.local/share/pnpm/store,type=volume"
     ]
 }
