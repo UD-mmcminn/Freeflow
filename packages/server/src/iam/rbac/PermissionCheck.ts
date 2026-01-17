@@ -10,7 +10,7 @@ export const checkPermission =
     }
 
 export const checkAnyPermission =
-    (_permissions: string[]) =>
+    (_permissions: string | string[]) =>
     (_req: Request, _res: Response, next: NextFunction): void => {
         next()
     }
