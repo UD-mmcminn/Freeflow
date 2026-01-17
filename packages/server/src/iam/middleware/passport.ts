@@ -2,9 +2,17 @@ import { Application, NextFunction, Request, Response } from 'express'
 import { v4 as uuidv4 } from 'uuid'
 import { LoggedInUser } from '../Interface.Iam'
 
+const requireEnv = (key: string): string => {
+    const value = process.env[key]
+    if (!value) {
+        throw new Error(`Missing required env: ${key}`)
+    }
+    return value
+}
+
 const buildStubUser = (): LoggedInUser => {
-    const orgId = process.env.DEFAULT_ORG_ID || 'stub-org'
-    const workspaceId = process.env.DEFAULT_WORKSPACE_ID || 'stub-workspace'
+    const orgId = requireEnv('DEFAULT_ORG_ID')
+    const workspaceId = requireEnv('DEFAULT_WORKSPACE_ID')
     return {
         id: uuidv4(),
         email: 'stub@flowise.local',
@@ -23,7 +31,7 @@ const buildStubUser = (): LoggedInUser => {
     }
 }
 
-export const initializeJwtCookieMiddleware = async (app: Application): Promise<void> => {
+export const initializeJwtCookieMiddleware = async (app: Application, _identityManager?: unknown): Promise<void> => {
     app.use((req: Request, _res: Response, next: NextFunction) => {
         if (!req.user) {
             req.user = buildStubUser()

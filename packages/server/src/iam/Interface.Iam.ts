@@ -1,5 +1,3 @@
-import type { User as ExpressUser } from 'express'
-
 export type FeatureFlags = Record<string, string>
 
 export enum ErrorMessage {
@@ -10,7 +8,7 @@ export enum ErrorMessage {
  * Core user shape carried on req.user/passport sessions.
  * Keep fields optional unless code expects them to exist.
  */
-export interface LoggedInUser extends ExpressUser {
+export interface LoggedInUser {
     id: string
     email?: string
     firstName?: string
@@ -19,11 +17,12 @@ export interface LoggedInUser extends ExpressUser {
     roles?: string[]
     isSuperAdmin?: boolean
     isOrganizationAdmin?: boolean
-    activeOrganizationId?: string
+    activeOrganizationId: string
     activeOrganizationSubscriptionId?: string
     activeOrganizationCustomerId?: string
     activeOrganizationProductId?: string
-    activeWorkspaceId?: string
+    activeWorkspaceId: string
+    activeWorkspace?: string
     activeWorkspaceRole?: string
     features?: FeatureFlags
     authStrategy?: string
