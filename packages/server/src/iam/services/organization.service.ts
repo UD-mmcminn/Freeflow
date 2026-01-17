@@ -1,6 +1,15 @@
 import { Organization } from '../database/entities/organization.entity'
 
-export class OrganizationService {
+export interface IOrganizationService {
+    readOrganization(queryRunner?: any): Promise<Organization[]>
+    listOrganizations(): Promise<Organization[]>
+    getOrganizationById(organizationId: string): Promise<Organization | null>
+    createOrganization(payload: any): Promise<Organization | null>
+    updateOrganization(organizationId: string, payload: any): Promise<Organization | null>
+    deleteOrganization(organizationId: string): Promise<void>
+}
+
+export class OrganizationService implements IOrganizationService {
     async readOrganization(_queryRunner?: any): Promise<Organization[]> {
         return []
     }

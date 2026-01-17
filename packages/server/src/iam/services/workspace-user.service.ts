@@ -1,7 +1,16 @@
 export enum WorkspaceUserErrorMessage {
     WORKSPACE_USER_NOT_FOUND = 'Workspace user not found'
 }
-export class WorkspaceUserService {
+export interface IWorkspaceUserService {
+    readWorkspaceUserByUserId(userId: string, queryRunner?: any): Promise<any[]>
+    listWorkspaceUsers(workspaceId?: string): Promise<any[]>
+    getWorkspaceUserById(workspaceUserId: string): Promise<any | null>
+    createWorkspaceUser(payload: any): Promise<any>
+    updateWorkspaceUser(workspaceUserId: string, payload: any): Promise<any>
+    deleteWorkspaceUser(workspaceUserId: string): Promise<void>
+}
+
+export class WorkspaceUserService implements IWorkspaceUserService {
     async readWorkspaceUserByUserId(_userId: string, _queryRunner?: any): Promise<any[]> {
         return []
     }

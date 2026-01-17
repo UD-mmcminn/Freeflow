@@ -1,4 +1,11 @@
-export class LoginSessionService {
+export interface ILoginSessionService {
+    listSessions(userId?: string): Promise<any[]>
+    getSessionById(sessionId: string): Promise<any | null>
+    createSession(payload: any): Promise<any>
+    revokeSession(sessionId: string): Promise<void>
+}
+
+export class LoginSessionService implements ILoginSessionService {
     async listSessions(_userId?: string): Promise<any[]> {
         return []
     }

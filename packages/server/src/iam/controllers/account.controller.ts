@@ -1,19 +1,23 @@
 import { Request, Response } from 'express'
 
-export const getAccount = async (_req: Request, res: Response) => {
-    return res.status(501).json({ message: 'Not implemented' })
+export interface IAccountController {
+    getAccount(req: Request, res: Response): Promise<Response>
+    updateAccount(req: Request, res: Response): Promise<Response>
+    resetPassword(req: Request, res: Response): Promise<Response>
 }
 
-export const updateAccount = async (_req: Request, res: Response) => {
-    return res.status(501).json({ message: 'Not implemented' })
+export class AccountController implements IAccountController {
+    async getAccount(_req: Request, res: Response): Promise<Response> {
+        return res.status(501).json({ message: 'Not implemented' })
+    }
+
+    async updateAccount(_req: Request, res: Response): Promise<Response> {
+        return res.status(501).json({ message: 'Not implemented' })
+    }
+
+    async resetPassword(_req: Request, res: Response): Promise<Response> {
+        return res.status(501).json({ message: 'Not implemented' })
+    }
 }
 
-export const resetPassword = async (_req: Request, res: Response) => {
-    return res.status(501).json({ message: 'Not implemented' })
-}
-
-export default {
-    getAccount,
-    updateAccount,
-    resetPassword
-}
+export default AccountController

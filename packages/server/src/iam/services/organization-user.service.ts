@@ -1,4 +1,12 @@
-export class OrganizationUserService {
+export interface IOrganizationUserService {
+    listOrganizationUsers(organizationId?: string): Promise<any[]>
+    getOrganizationUserById(organizationUserId: string): Promise<any | null>
+    createOrganizationUser(payload: any): Promise<any>
+    updateOrganizationUser(organizationUserId: string, payload: any): Promise<any>
+    deleteOrganizationUser(organizationUserId: string): Promise<void>
+}
+
+export class OrganizationUserService implements IOrganizationUserService {
     async listOrganizationUsers(_organizationId?: string): Promise<any[]> {
         return []
     }

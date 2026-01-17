@@ -1,29 +1,33 @@
 import { Request, Response } from 'express'
 
-export const listRoles = async (_req: Request, res: Response) => {
-    return res.status(501).json({ message: 'Not implemented' })
+export interface IRoleController {
+    listRoles(req: Request, res: Response): Promise<Response>
+    getRole(req: Request, res: Response): Promise<Response>
+    createRole(req: Request, res: Response): Promise<Response>
+    updateRole(req: Request, res: Response): Promise<Response>
+    deleteRole(req: Request, res: Response): Promise<Response>
 }
 
-export const getRole = async (_req: Request, res: Response) => {
-    return res.status(501).json({ message: 'Not implemented' })
+export class RoleController implements IRoleController {
+    async listRoles(_req: Request, res: Response): Promise<Response> {
+        return res.status(501).json({ message: 'Not implemented' })
+    }
+
+    async getRole(_req: Request, res: Response): Promise<Response> {
+        return res.status(501).json({ message: 'Not implemented' })
+    }
+
+    async createRole(_req: Request, res: Response): Promise<Response> {
+        return res.status(501).json({ message: 'Not implemented' })
+    }
+
+    async updateRole(_req: Request, res: Response): Promise<Response> {
+        return res.status(501).json({ message: 'Not implemented' })
+    }
+
+    async deleteRole(_req: Request, res: Response): Promise<Response> {
+        return res.status(501).json({ message: 'Not implemented' })
+    }
 }
 
-export const createRole = async (_req: Request, res: Response) => {
-    return res.status(501).json({ message: 'Not implemented' })
-}
-
-export const updateRole = async (_req: Request, res: Response) => {
-    return res.status(501).json({ message: 'Not implemented' })
-}
-
-export const deleteRole = async (_req: Request, res: Response) => {
-    return res.status(501).json({ message: 'Not implemented' })
-}
-
-export default {
-    listRoles,
-    getRole,
-    createRole,
-    updateRole,
-    deleteRole
-}
+export default RoleController

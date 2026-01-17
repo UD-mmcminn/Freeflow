@@ -1,19 +1,23 @@
 import { Request, Response } from 'express'
 
-export const listLoginSessions = async (_req: Request, res: Response) => {
-    return res.status(501).json({ message: 'Not implemented' })
+export interface ILoginSessionController {
+    listLoginSessions(req: Request, res: Response): Promise<Response>
+    getLoginSession(req: Request, res: Response): Promise<Response>
+    revokeLoginSession(req: Request, res: Response): Promise<Response>
 }
 
-export const getLoginSession = async (_req: Request, res: Response) => {
-    return res.status(501).json({ message: 'Not implemented' })
+export class LoginSessionController implements ILoginSessionController {
+    async listLoginSessions(_req: Request, res: Response): Promise<Response> {
+        return res.status(501).json({ message: 'Not implemented' })
+    }
+
+    async getLoginSession(_req: Request, res: Response): Promise<Response> {
+        return res.status(501).json({ message: 'Not implemented' })
+    }
+
+    async revokeLoginSession(_req: Request, res: Response): Promise<Response> {
+        return res.status(501).json({ message: 'Not implemented' })
+    }
 }
 
-export const revokeLoginSession = async (_req: Request, res: Response) => {
-    return res.status(501).json({ message: 'Not implemented' })
-}
-
-export default {
-    listLoginSessions,
-    getLoginSession,
-    revokeLoginSession
-}
+export default LoginSessionController
