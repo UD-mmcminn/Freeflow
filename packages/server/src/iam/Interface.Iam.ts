@@ -1,5 +1,8 @@
 export type FeatureFlags = Record<string, string>
 
+export type LoginMethodStatusLike = 'ENABLE' | 'DISABLE'
+export type RoleScope = 'system' | 'organization' | 'workspace'
+
 export enum ErrorMessage {
     FORBIDDEN = 'Forbidden'
 }
@@ -34,4 +37,134 @@ export interface JwtPayload {
     workspaceId?: string
     iat?: number
     exp?: number
+}
+
+export interface IUser {
+    id: string
+    email: string
+    firstName?: string
+    lastName?: string
+    credential?: string | Promise<string>
+    tempToken?: string
+    tokenExpiry?: number
+    isActive: boolean
+    emailVerified: boolean
+    createdDate: Date
+    updatedDate: Date
+    organizationUsers?: IOrganizationUser[]
+    workspaceUsers?: IWorkspaceUser[]
+    loginSessions?: ILoginSession[]
+    loginActivities?: ILoginActivity[]
+}
+
+export interface IOrganization {
+    id: string
+    name: string
+    subscriptionId?: string
+    customerId?: string
+    productId?: string
+    createdDate: Date
+    updatedDate: Date
+    workspaces?: IWorkspace[]
+    organizationUsers?: IOrganizationUser[]
+    roles?: IRole[]
+    loginMethods?: ILoginMethod[]
+}
+
+export interface IWorkspace {
+    id: string
+    name: string
+    organizationId: string
+    isPersonal: boolean
+    createdDate: Date
+    updatedDate: Date
+    organization?: IOrganization
+    workspaceUsers?: IWorkspaceUser[]
+    sharedItems?: IWorkspaceShared[]
+}
+
+export interface IOrganizationUser {
+    id: string
+    organizationId: string
+    userId: string
+    roleId?: string
+    isOwner: boolean
+    createdDate: Date
+    updatedDate: Date
+    organization?: IOrganization
+    user?: IUser
+    role?: IRole
+}
+
+export interface IWorkspaceUser {
+    id: string
+    workspaceId: string
+    userId: string
+    roleId?: string
+    createdDate: Date
+    updatedDate: Date
+    workspace?: IWorkspace
+    user?: IUser
+    role?: IRole
+}
+
+export interface IRole {
+    id: string
+    name: string
+    permissions: any
+    scope: RoleScope
+    organizationId?: string
+    createdDate: Date
+    updatedDate: Date
+    organization?: IOrganization
+    organizationUsers?: IOrganizationUser[]
+    workspaceUsers?: IWorkspaceUser[]
+}
+
+export interface ILoginMethod {
+    id: string
+    name: string
+    status: LoginMethodStatusLike
+    config: string
+    organizationId?: string
+    createdDate: Date
+    updatedDate: Date
+    organization?: IOrganization
+}
+
+export interface ILoginSession {
+    id: string
+    userId: string
+    sessionToken: string
+    refreshToken?: string
+    expiresAt?: Date
+    createdDate: Date
+    updatedDate: Date
+    user?: IUser
+}
+
+export interface ILoginActivity {
+    id: string
+    userId: string
+    organizationId?: string
+    workspaceId?: string
+    authStrategy?: string
+    status?: string
+    ipAddress?: string
+    userAgent?: string
+    createdDate: Date
+    user?: IUser
+    organization?: IOrganization
+    workspace?: IWorkspace
+}
+
+export interface IWorkspaceShared {
+    id: string
+    workspaceId: string
+    sharedItemId: string
+    itemType: string
+    createdByUserId?: string
+    createdDate: Date
+    workspace?: IWorkspace
+    createdBy?: IUser
 }
