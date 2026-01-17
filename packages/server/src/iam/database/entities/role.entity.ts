@@ -1,6 +1,40 @@
-export class Role {
+import { Column, CreateDateColumn, Entity, ManyToOne, OneToMany, PrimaryGeneratedColumn, UpdateDateColumn } from 'typeorm'
+import { IRole, RoleScope } from '../../Interface.Iam'
+import { Organization } from './organization.entity'
+import { OrganizationUser } from './organization-user.entity'
+import { WorkspaceUser } from './workspace-user.entity'
+
+@Entity('role')
+export class Role implements IRole {
     [key: string]: any
-    id?: string
-    name?: string
-    permissions?: any
+
+    @PrimaryGeneratedColumn('uuid')
+    id: string
+
+    @Column({ type: 'text' })
+    name: string
+
+    @Column({ nullable: false, type: 'simple-json', default: '[]' })
+    permissions: any
+
+    @Column({ type: 'text', default: 'organization' })
+    scope: RoleScope
+
+    @Column({ nullable: true, type: 'text' })
+    organizationId?: string
+
+    @CreateDateColumn({ type: 'timestamp' })
+    createdDate: Date
+
+    @UpdateDateColumn({ type: 'timestamp' })
+    updatedDate: Date
+
+    @ManyToOne(() => Organization, (organization) => organization.roles, { onDelete: 'CASCADE' })
+    organization?: Organization
+
+    @OneToMany(() => OrganizationUser, (organizationUser) => organizationUser.role)
+    organizationUsers?: OrganizationUser[]
+
+    @OneToMany(() => WorkspaceUser, (workspaceUser) => workspaceUser.role)
+    workspaceUsers?: WorkspaceUser[]
 }
