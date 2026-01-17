@@ -1,9 +1,13 @@
 import { Request, Response } from 'express'
 
-export const listLoginActivity = async (_req: Request, res: Response) => {
-    return res.status(501).json({ message: 'Not implemented' })
+export interface ILoginActivityController {
+    listLoginActivity(req: Request, res: Response): Promise<Response>
 }
 
-export default {
-    listLoginActivity
+export class LoginActivityController implements ILoginActivityController {
+    async listLoginActivity(_req: Request, res: Response): Promise<Response> {
+        return res.status(501).json({ message: 'Not implemented' })
+    }
 }
+
+export default LoginActivityController

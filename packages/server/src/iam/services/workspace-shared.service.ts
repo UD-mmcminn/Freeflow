@@ -1,4 +1,11 @@
-export class WorkspaceSharedService {
+export interface IWorkspaceSharedService {
+    listWorkspaceSharedItems(workspaceId?: string): Promise<any[]>
+    getWorkspaceSharedById(workspaceSharedId: string): Promise<any | null>
+    createWorkspaceShared(payload: any): Promise<any>
+    deleteWorkspaceShared(workspaceSharedId: string): Promise<void>
+}
+
+export class WorkspaceSharedService implements IWorkspaceSharedService {
     async listWorkspaceSharedItems(_workspaceId?: string): Promise<any[]> {
         return []
     }

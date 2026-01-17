@@ -1,29 +1,33 @@
 import { Request, Response } from 'express'
 
-export const listWorkspaces = async (_req: Request, res: Response) => {
-    return res.status(501).json({ message: 'Not implemented' })
+export interface IWorkspaceController {
+    listWorkspaces(req: Request, res: Response): Promise<Response>
+    getWorkspace(req: Request, res: Response): Promise<Response>
+    createWorkspace(req: Request, res: Response): Promise<Response>
+    updateWorkspace(req: Request, res: Response): Promise<Response>
+    deleteWorkspace(req: Request, res: Response): Promise<Response>
 }
 
-export const getWorkspace = async (_req: Request, res: Response) => {
-    return res.status(501).json({ message: 'Not implemented' })
+export class WorkspaceController implements IWorkspaceController {
+    async listWorkspaces(_req: Request, res: Response): Promise<Response> {
+        return res.status(501).json({ message: 'Not implemented' })
+    }
+
+    async getWorkspace(_req: Request, res: Response): Promise<Response> {
+        return res.status(501).json({ message: 'Not implemented' })
+    }
+
+    async createWorkspace(_req: Request, res: Response): Promise<Response> {
+        return res.status(501).json({ message: 'Not implemented' })
+    }
+
+    async updateWorkspace(_req: Request, res: Response): Promise<Response> {
+        return res.status(501).json({ message: 'Not implemented' })
+    }
+
+    async deleteWorkspace(_req: Request, res: Response): Promise<Response> {
+        return res.status(501).json({ message: 'Not implemented' })
+    }
 }
 
-export const createWorkspace = async (_req: Request, res: Response) => {
-    return res.status(501).json({ message: 'Not implemented' })
-}
-
-export const updateWorkspace = async (_req: Request, res: Response) => {
-    return res.status(501).json({ message: 'Not implemented' })
-}
-
-export const deleteWorkspace = async (_req: Request, res: Response) => {
-    return res.status(501).json({ message: 'Not implemented' })
-}
-
-export default {
-    listWorkspaces,
-    getWorkspace,
-    createWorkspace,
-    updateWorkspace,
-    deleteWorkspace
-}
+export default WorkspaceController

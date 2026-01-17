@@ -1,4 +1,9 @@
-export class LoginActivityService {
+export interface ILoginActivityService {
+    listLoginActivity(userId?: string): Promise<any[]>
+    recordLoginActivity(payload: any): Promise<any>
+}
+
+export class LoginActivityService implements ILoginActivityService {
     async listLoginActivity(_userId?: string): Promise<any[]> {
         return []
     }
