@@ -10,10 +10,10 @@ import { AbortControllerPool } from './AbortControllerPool'
 import { CachePool } from './CachePool'
 import { ChatFlow } from './database/entities/ChatFlow'
 import { getDataSource } from './DataSource'
-import { Organization } from './enterprise/database/entities/organization.entity'
-import { Workspace } from './enterprise/database/entities/workspace.entity'
-import { LoggedInUser } from './enterprise/Interface.Enterprise'
-import { initializeJwtCookieMiddleware, verifyToken, verifyTokenForBullMQDashboard } from './enterprise/middleware/passport'
+import { Organization } from './iam/database/entities/organization.entity'
+import { Workspace } from './iam/database/entities/workspace.entity'
+import { LoggedInUser } from './iam/Interface.Iam'
+import { initializeJwtCookieMiddleware, verifyToken, verifyTokenForBullMQDashboard } from './iam/middleware/passport'
 import { IdentityManager } from './IdentityManager'
 import { MODE, Platform } from './Interface'
 import { IMetricsProvider } from './Interface.Metrics'
@@ -227,13 +227,6 @@ export class App {
                         const isAPIKeyBlacklistedURLS = API_KEY_BLACKLIST_URLS.some((url) => req.path.startsWith(url))
                         if (isAPIKeyBlacklistedURLS) {
                             return res.status(401).json({ error: 'Unauthorized Access' })
-                        }
-
-                        // Only check license validity for non-open-source platforms
-                        if (this.identityManager.getPlatformType() !== Platform.OPEN_SOURCE) {
-                            if (!this.identityManager.isLicenseValid()) {
-                                return res.status(401).json({ error: 'Unauthorized Access' })
-                            }
                         }
 
                         const { isValid, apiKey } = await validateAPIKey(req)

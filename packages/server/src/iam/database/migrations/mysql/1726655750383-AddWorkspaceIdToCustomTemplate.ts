@@ -1,0 +1,1 @@
+export class AddWorkspaceIdToCustomTemplate1726655750383 {}

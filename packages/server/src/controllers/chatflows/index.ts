@@ -9,7 +9,7 @@ import { getRunningExpressApp } from '../../utils/getRunningExpressApp'
 import { checkUsageLimit } from '../../utils/quotaUsage'
 import { RateLimiterManager } from '../../utils/rateLimit'
 import { getPageAndLimitParams } from '../../utils/pagination'
-import { WorkspaceUserErrorMessage, WorkspaceUserService } from '../../enterprise/services/workspace-user.service'
+import { WorkspaceUserErrorMessage, WorkspaceUserService } from '../../iam/services/workspace-user.service'
 import { QueryRunner } from 'typeorm'
 import { GeneralErrorMessage } from '../../utils/constants'
 

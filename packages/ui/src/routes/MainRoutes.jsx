@@ -61,7 +61,7 @@ const Logs = Loadable(lazy(() => import('@/views/serverlogs')))
 // executions routing
 const Executions = Loadable(lazy(() => import('@/views/agentexecutions')))
 
-// enterprise features
+// iam features
 const UsersPage = Loadable(lazy(() => import('@/views/users')))
 const RolesPage = Loadable(lazy(() => import('@/views/roles')))
 const LoginActivityPage = Loadable(lazy(() => import('@/views/auth/loginActivity')))

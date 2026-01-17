@@ -42,17 +42,17 @@ import { AddTextToSpeechToChatFlow1759419194331 } from './1759419194331-AddTextT
 import { AddChatFlowNameIndex1759424903973 } from './1759424903973-AddChatFlowNameIndex'
 import { AddApiKeyPermission1765360298674 } from './1765360298674-AddApiKeyPermission'
 
-import { AddAuthTables1720230151482 } from '../../../enterprise/database/migrations/postgres/1720230151482-AddAuthTables'
-import { AddWorkspace1720230151484 } from '../../../enterprise/database/migrations/postgres/1720230151484-AddWorkspace'
-import { AddWorkspaceShared1726654922034 } from '../../../enterprise/database/migrations/postgres/1726654922034-AddWorkspaceShared'
-import { AddWorkspaceIdToCustomTemplate1726655750383 } from '../../../enterprise/database/migrations/postgres/1726655750383-AddWorkspaceIdToCustomTemplate'
-import { AddOrganization1727798417345 } from '../../../enterprise/database/migrations/postgres/1727798417345-AddOrganization'
-import { LinkWorkspaceId1729130948686 } from '../../../enterprise/database/migrations/postgres/1729130948686-LinkWorkspaceId'
-import { LinkOrganizationId1729133111652 } from '../../../enterprise/database/migrations/postgres/1729133111652-LinkOrganizationId'
-import { AddSSOColumns1730519457880 } from '../../../enterprise/database/migrations/postgres/1730519457880-AddSSOColumns'
-import { AddPersonalWorkspace1734074497540 } from '../../../enterprise/database/migrations/postgres/1734074497540-AddPersonalWorkspace'
-import { RefactorEnterpriseDatabase1737076223692 } from '../../../enterprise/database/migrations/postgres/1737076223692-RefactorEnterpriseDatabase'
-import { ExecutionLinkWorkspaceId1746862866554 } from '../../../enterprise/database/migrations/postgres/1746862866554-ExecutionLinkWorkspaceId'
+import { AddAuthTables1720230151482 } from '../../../iam/database/migrations/postgres/1720230151482-AddAuthTables'
+import { AddWorkspace1720230151484 } from '../../../iam/database/migrations/postgres/1720230151484-AddWorkspace'
+import { AddWorkspaceShared1726654922034 } from '../../../iam/database/migrations/postgres/1726654922034-AddWorkspaceShared'
+import { AddWorkspaceIdToCustomTemplate1726655750383 } from '../../../iam/database/migrations/postgres/1726655750383-AddWorkspaceIdToCustomTemplate'
+import { AddOrganization1727798417345 } from '../../../iam/database/migrations/postgres/1727798417345-AddOrganization'
+import { LinkWorkspaceId1729130948686 } from '../../../iam/database/migrations/postgres/1729130948686-LinkWorkspaceId'
+import { LinkOrganizationId1729133111652 } from '../../../iam/database/migrations/postgres/1729133111652-LinkOrganizationId'
+import { AddSSOColumns1730519457880 } from '../../../iam/database/migrations/postgres/1730519457880-AddSSOColumns'
+import { AddPersonalWorkspace1734074497540 } from '../../../iam/database/migrations/postgres/1734074497540-AddPersonalWorkspace'
+import { RefactorIamDatabase1737076223692 } from '../../../iam/database/migrations/postgres/1737076223692-RefactorIamDatabase'
+import { ExecutionLinkWorkspaceId1746862866554 } from '../../../iam/database/migrations/postgres/1746862866554-ExecutionLinkWorkspaceId'
 
 export const postgresMigrations = [
     Init1693891895163,
@@ -98,7 +98,7 @@ export const postgresMigrations = [
     AddSSOColumns1730519457880,
     AddSeqNoToDatasetRow1733752119696,
     AddPersonalWorkspace1734074497540,
-    RefactorEnterpriseDatabase1737076223692,
+    RefactorIamDatabase1737076223692,
     AddExecutionEntity1738090872625,
     FixOpenSourceAssistantTable1743758056188,
     AddErrorToEvaluationRun1744964560174,

@@ -41,7 +41,7 @@ const SignInPage = () => {
     const theme = useTheme()
     useSelector((state) => state.customization)
     useNotifier()
-    const { isEnterpriseLicensed, isCloud, isOpenSource } = useConfig()
+    const { isIamLicensed, isCloud, isOpenSource } = useConfig()
 
     const usernameInput = {
         label: 'Username',
@@ -212,7 +212,7 @@ const SignInPage = () => {
                                 .
                             </Typography>
                         )}
-                        {isEnterpriseLicensed && (
+                        {isIamLicensed && (
                             <Typography variant='body2' sx={{ color: theme.palette.grey[600] }}>
                                 Have an invite code?{' '}
                                 <Link style={{ color: `${theme.palette.primary.main}` }} to='/register'>

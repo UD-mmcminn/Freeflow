@@ -7,7 +7,7 @@ const ConfigContext = createContext()
 export const ConfigProvider = ({ children }) => {
     const [config, setConfig] = useState({})
     const [loading, setLoading] = useState(true)
-    const [isEnterpriseLicensed, setEnterpriseLicensed] = useState(false)
+    const [isIamLicensed, setIamLicensed] = useState(false)
     const [isCloud, setCloudLicensed] = useState(false)
     const [isOpenSource, setOpenSource] = useState(false)
 
@@ -20,17 +20,17 @@ export const ConfigProvider = ({ children }) => {
                 }
                 setConfig(finalData)
                 if (finalData.PLATFORM_TYPE) {
-                    if (finalData.PLATFORM_TYPE === 'enterprise') {
-                        setEnterpriseLicensed(true)
+                    if (finalData.PLATFORM_TYPE === 'iam') {
+                        setIamLicensed(true)
                         setCloudLicensed(false)
                         setOpenSource(false)
                     } else if (finalData.PLATFORM_TYPE === 'cloud') {
                         setCloudLicensed(true)
-                        setEnterpriseLicensed(false)
+                        setIamLicensed(false)
                         setOpenSource(false)
                     } else {
                         setOpenSource(true)
-                        setEnterpriseLicensed(false)
+                        setIamLicensed(false)
                         setCloudLicensed(false)
                     }
                 }
@@ -44,7 +44,7 @@ export const ConfigProvider = ({ children }) => {
     }, [])
 
     return (
-        <ConfigContext.Provider value={{ config, loading, isEnterpriseLicensed, isCloud, isOpenSource }}>{children}</ConfigContext.Provider>
+        <ConfigContext.Provider value={{ config, loading, isIamLicensed, isCloud, isOpenSource }}>{children}</ConfigContext.Provider>
     )
 }
 

@@ -102,7 +102,7 @@ services:
             - ALLOW_UNAUTHORIZED_CERTS=${ALLOW_UNAUTHORIZED_CERTS}
             - SENDER_EMAIL=${SENDER_EMAIL}
 
-            # ENTERPRISE
+            # IAM
             - LICENSE_URL=${LICENSE_URL}
             - FLOWISE_EE_LICENSE_KEY=${FLOWISE_EE_LICENSE_KEY}
             - OFFLINE=${OFFLINE}
@@ -248,7 +248,7 @@ services:
             - ALLOW_UNAUTHORIZED_CERTS=${ALLOW_UNAUTHORIZED_CERTS}
             - SENDER_EMAIL=${SENDER_EMAIL}
 
-            # ENTERPRISE
+            # IAM
             - LICENSE_URL=${LICENSE_URL}
             - FLOWISE_EE_LICENSE_KEY=${FLOWISE_EE_LICENSE_KEY}
             - OFFLINE=${OFFLINE}

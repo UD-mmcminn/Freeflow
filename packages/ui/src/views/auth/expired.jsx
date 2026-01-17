@@ -28,7 +28,7 @@ const LicenseExpired = () => {
                             <img style={{ objectFit: 'cover', height: '16vh', width: 'auto' }} src={contactSupport} alt='contact support' />
                         </Box>
                         <Typography sx={{ mb: 2 }} variant='h4' component='div' fontWeight='bold'>
-                            Your enterprise license has expired
+                            Your iam license has expired
                         </Typography>
                         <Typography variant='body1' component='div' sx={{ mb: 2 }}>
                             Please contact our support team to renew your license.

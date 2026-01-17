@@ -41,7 +41,7 @@ const NavGroup = ({ item }) => {
             return false // Do not render if permission is lacking
         }
 
-        // If `display` is defined, check against cloud/enterprise conditions
+        // If `display` is defined, check against cloud/iam conditions
         if (menu.display) {
             const shouldsiplay = hasDisplay(menu.display)
             return shouldsiplay

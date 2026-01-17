@@ -34,7 +34,7 @@ import { IconCircleCheck, IconExclamationCircle } from '@tabler/icons-react'
 // ==============================|| Organization & Admin User Setup ||============================== //
 
 // IMPORTANT: when updating this schema, update the schema on the server as well
-// packages/server/src/enterprise/Interface.Enterprise.ts
+// packages/server/src/iam/Interface.Iam.ts
 const OrgSetupSchema = z
     .object({
         username: z.string().min(1, 'Name is required'),
@@ -49,7 +49,7 @@ const OrgSetupSchema = z
 
 const OrganizationSetupPage = () => {
     useNotifier()
-    const { isEnterpriseLicensed, isOpenSource } = useConfig()
+    const { isIamLicensed, isOpenSource } = useConfig()
 
     const orgNameInput = {
         label: 'Organization',
@@ -149,7 +149,7 @@ const OrganizationSetupPage = () => {
                     credential: password
                 }
             }
-            if (isEnterpriseLicensed) {
+            if (isIamLicensed) {
                 body.organization = {
                     name: orgName
                 }
@@ -169,7 +169,7 @@ const OrganizationSetupPage = () => {
                     ? registerAccountApi.error.response.data.message
                     : registerAccountApi.error.response.data
             let finalErrMessage = ''
-            if (isEnterpriseLicensed) {
+            if (isIamLicensed) {
                 finalErrMessage = `Error in registering organization. Please contact your administrator. (${errMessage})`
             } else {
                 finalErrMessage = `Error in registering account: ${errMessage}`
@@ -276,7 +276,7 @@ const OrganizationSetupPage = () => {
                             Application authentication now requires email and password. Contact administrator to setup an account.
                         </Alert>
                     )}
-                    {(isOpenSource || isEnterpriseLicensed) && (
+                    {(isOpenSource || isIamLicensed) && (
                         <Typography variant='caption'>
                             Account setup does not make any external connections, your data stays securely on your locally hosted server.
                         </Typography>
@@ -325,7 +325,7 @@ const OrganizationSetupPage = () => {
                                     </Divider>
                                 </>
                             )}
-                            {isEnterpriseLicensed && (
+                            {isIamLicensed && (
                                 <>
                                     <Box>
                                         <div style={{ display: 'flex', flexDirection: 'row' }}>

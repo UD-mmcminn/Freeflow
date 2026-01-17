@@ -79,7 +79,7 @@ const WorkspaceSwitcher = () => {
     const isAuthenticated = useSelector((state) => state.auth.isAuthenticated)
     const features = useSelector((state) => state.auth.features)
 
-    const { isEnterpriseLicensed } = useConfig()
+    const { isIamLicensed } = useConfig()
 
     const [anchorEl, setAnchorEl] = useState(null)
     const open = Boolean(anchorEl)
@@ -124,7 +124,7 @@ const WorkspaceSwitcher = () => {
             if (Object.hasOwnProperty.call(features, WORKSPACE_FLAG)) {
                 const flag = features[WORKSPACE_FLAG] === 'true' || features[WORKSPACE_FLAG] === true
                 if (flag) {
-                    if (isEnterpriseLicensed) {
+                    if (isIamLicensed) {
                         getWorkspacesByOrganizationIdUserIdApi.request(user.activeOrganizationId, user.id)
                     } else {
                         getWorkspacesByUserIdApi.request(user.id)
@@ -134,7 +134,7 @@ const WorkspaceSwitcher = () => {
         }
 
         // eslint-disable-next-line react-hooks/exhaustive-deps
-    }, [isAuthenticated, user, features, isEnterpriseLicensed])
+    }, [isAuthenticated, user, features, isIamLicensed])
 
     useEffect(() => {
         if (getWorkspacesByOrganizationIdUserIdApi.data) {
@@ -364,7 +364,7 @@ const WorkspaceSwitcher = () => {
                     <Stack spacing={3}>
                         <Typography variant='h5'>Workspace Switch Error</Typography>
                         <Typography variant='body1'>{errorMessage}</Typography>
-                        {isEnterpriseLicensed && (
+                        {isIamLicensed && (
                             <Typography variant='body2' color='text.secondary'>
                                 Please contact your administrator for assistance.
                             </Typography>

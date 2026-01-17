@@ -34,7 +34,7 @@ const CreateEditRoleDialog = ({ show, dialogProps, onCancel, onConfirm, setError
     const portalElement = document.getElementById('portal')
 
     const dispatch = useDispatch()
-    const { isOpenSource, isEnterpriseLicensed, isCloud } = useConfig()
+    const { isOpenSource, isIamLicensed, isCloud } = useConfig()
 
     // ==============================|| Snackbar ||============================== //
 
@@ -161,7 +161,7 @@ const CreateEditRoleDialog = ({ show, dialogProps, onCancel, onConfirm, setError
             Object.keys(permissions).forEach((category) => {
                 permissions[category] = permissions[category].filter((permission) => {
                     if (isOpenSource) return permission.isOpenSource
-                    if (isEnterpriseLicensed) return permission.isEnterprise
+                    if (isIamLicensed) return permission.isIam
                     if (isCloud) return permission.isCloud
                     return false // fallback - show nothing if no platform is set
                 })

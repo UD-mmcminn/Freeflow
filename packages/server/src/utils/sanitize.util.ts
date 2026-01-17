@@ -1,4 +1,4 @@
-import { User } from '../enterprise/database/entities/user.entity'
+import { User } from '../iam/database/entities/user.entity'
 
 export function sanitizeNullBytes(obj: any): any {
     const stack = [obj]
