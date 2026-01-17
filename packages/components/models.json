@@ -585,7 +585,7 @@
                 {
                     "label": "claude-3-sonnet",
                     "name": "claude-3-sonnet-20240229",
-                    "description": "Ideal balance of intelligence and speed for enterprise workloads",
+                    "description": "Ideal balance of intelligence and speed for large-scale workloads",
                     "input_cost": 0.000003,
                     "output_cost": 0.000015
                 },
@@ -618,7 +618,7 @@
                 {
                     "label": "claude-3-sonnet",
                     "name": "claude-3-sonnet",
-                    "description": "Ideal balance of intelligence and speed for enterprise workloads",
+                    "description": "Ideal balance of intelligence and speed for large-scale workloads",
                     "input_cost": 0.000003,
                     "output_cost": 0.000015
                 },

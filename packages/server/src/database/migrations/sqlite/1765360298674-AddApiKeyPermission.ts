@@ -1,5 +1,5 @@
 import { MigrationInterface, QueryRunner } from 'typeorm'
-import { Role } from '../../../enterprise/database/entities/role.entity'
+import { Role } from '../../../iam/database/entities/role.entity'
 import { hasColumn } from '../../../utils/database.util'
 import logger from '../../../utils/logger'
 

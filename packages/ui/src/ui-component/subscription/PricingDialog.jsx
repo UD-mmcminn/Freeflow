@@ -56,7 +56,7 @@ const PricingDialog = ({ open, onClose }) => {
     }, [])
 
     const handlePlanClick = async (plan) => {
-        if (plan.title === 'Enterprise') {
+        if (plan.title === 'IAM') {
             window.location.href = 'mailto:hello@flowiseai.com'
             return
         }
@@ -164,8 +164,8 @@ const PricingDialog = ({ open, onClose }) => {
         if (!getPricingPlansApi.data) return []
 
         return getPricingPlansApi.data.map((plan) => {
-            // Enterprise plan has special handling
-            if (plan.title === 'Enterprise') {
+            // IAM plan has special handling
+            if (plan.title === 'IAM') {
                 return {
                     ...plan,
                     buttonText: 'Contact Us',
@@ -177,7 +177,7 @@ const PricingDialog = ({ open, onClose }) => {
             const isCurrentPlanValue = currentUser?.activeOrganizationProductId === plan.prodId
             const isStarterPlan = plan.title === 'Starter'
 
-            if (isCurrentPlanValue && (plan.title === 'Pro' || plan.title === 'Enterprise')) {
+            if (isCurrentPlanValue && (plan.title === 'Pro' || plan.title === 'IAM')) {
                 getAllWorkspacesApi.request(currentUser?.activeOrganizationId)
                 getAllAPIKeysApi.request({ type: 'organization' })
             }

@@ -36,8 +36,8 @@ import { IconCircleCheck, IconExclamationCircle } from '@tabler/icons-react'
 // ==============================|| Register ||============================== //
 
 // IMPORTANT: when updating this schema, update the schema on the server as well
-// packages/server/src/enterprise/Interface.Enterprise.ts
-const RegisterEnterpriseUserSchema = z
+// packages/server/src/iam/Interface.Iam.ts
+const RegisterIamUserSchema = z
     .object({
         username: z.string().min(1, 'Name is required'),
         email: z.string().min(1, 'Email is required').email('Invalid email address'),
@@ -65,7 +65,7 @@ const RegisterCloudUserSchema = z
 const RegisterPage = () => {
     const theme = useTheme()
     useNotifier()
-    const { isEnterpriseLicensed, isCloud, isOpenSource } = useConfig()
+    const { isIamLicensed, isCloud, isOpenSource } = useConfig()
 
     const usernameInput = {
         label: 'Username',
@@ -124,8 +124,8 @@ const RegisterPage = () => {
     const register = async (event) => {
         event.preventDefault()
         setAuthRateLimitError(null)
-        if (isEnterpriseLicensed) {
-            const result = RegisterEnterpriseUserSchema.safeParse({
+        if (isIamLicensed) {
+            const result = RegisterIamUserSchema.safeParse({
                 username,
                 email,
                 token,
@@ -183,7 +183,7 @@ const RegisterPage = () => {
 
     useEffect(() => {
         if (registerApi.error) {
-            if (isEnterpriseLicensed) {
+            if (isIamLicensed) {
                 setAuthError(
                     `Error in registering user. Please contact your administrator. (${registerApi.error?.response?.data?.message})`
                 )
@@ -240,7 +240,7 @@ const RegisterPage = () => {
             setToken('')
             setUsername('')
             setEmail('')
-            if (isEnterpriseLicensed) {
+            if (isIamLicensed) {
                 setSuccessMsg('Registration Successful. You will be redirected to the sign in page shortly.')
             } else if (isCloud) {
                 setSuccessMsg('To complete your registration, please click on the verification link we sent to your email address')
@@ -336,7 +336,7 @@ const RegisterPage = () => {
                                     <i>Kindly use a valid email address. Will be used as login id.</i>
                                 </Typography>
                             </Box>
-                            {isEnterpriseLicensed && (
+                            {isIamLicensed && (
                                 <Box>
                                     <div style={{ display: 'flex', flexDirection: 'row' }}>
                                         <Typography>

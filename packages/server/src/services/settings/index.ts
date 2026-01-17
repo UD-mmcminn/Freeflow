@@ -9,12 +9,8 @@ const getSettings = async () => {
         const platformType = appServer.identityManager.getPlatformType()
 
         switch (platformType) {
-            case Platform.ENTERPRISE: {
-                if (!appServer.identityManager.isLicenseValid()) {
-                    return {}
-                } else {
-                    return { PLATFORM_TYPE: Platform.ENTERPRISE }
-                }
+            case Platform.IAM: {
+                return { PLATFORM_TYPE: Platform.IAM }
             }
             case Platform.CLOUD: {
                 return { PLATFORM_TYPE: Platform.CLOUD }

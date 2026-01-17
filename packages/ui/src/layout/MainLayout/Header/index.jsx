@@ -151,7 +151,7 @@ const Header = ({ handleLeftDrawerToggle }) => {
 
     const [isDark, setIsDark] = useState(customization.isDarkMode)
     const dispatch = useDispatch()
-    const { isEnterpriseLicensed, isCloud, isOpenSource } = useConfig()
+    const { isIamLicensed, isCloud, isOpenSource } = useConfig()
     const currentUser = useSelector((state) => state.auth.user)
     const isAuthenticated = useSelector((state) => state.auth.isAuthenticated)
     const [isPricingOpen, setIsPricingOpen] = useState(false)
@@ -268,7 +268,7 @@ const Header = ({ handleLeftDrawerToggle }) => {
             ) : (
                 <Box sx={{ flexGrow: 1 }} />
             )}
-            {isEnterpriseLicensed && isAuthenticated && <WorkspaceSwitcher />}
+            {isIamLicensed && isAuthenticated && <WorkspaceSwitcher />}
             {isCloud && isAuthenticated && <OrgWorkspaceBreadcrumbs />}
             {isCloud && currentUser?.isOrganizationAdmin && (
                 <Button

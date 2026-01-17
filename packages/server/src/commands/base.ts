@@ -127,7 +127,7 @@ export abstract class BaseCommand extends Command {
         TOKEN_HASH_SECRET: Flags.string(),
         WORKSPACE_INVITE_TEMPLATE_PATH: Flags.string(),
 
-        // Enterprise
+        // IAM
         LICENSE_URL: Flags.string(),
         FLOWISE_EE_LICENSE_KEY: Flags.string(),
         OFFLINE: Flags.string(),

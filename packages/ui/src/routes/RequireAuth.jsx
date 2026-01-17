@@ -29,7 +29,7 @@ const checkFeatureFlag = (features, display, children) => {
 
 export const RequireAuth = ({ permission, display, children }) => {
     const location = useLocation()
-    const { isCloud, isOpenSource, isEnterpriseLicensed, loading } = useConfig()
+    const { isCloud, isOpenSource, isIamLicensed, loading } = useConfig()
     const { hasPermission } = useAuth()
     const isGlobal = useSelector((state) => state.auth.isGlobal)
     const currentUser = useSelector((state) => state.auth.user)
@@ -53,8 +53,8 @@ export const RequireAuth = ({ permission, display, children }) => {
         return !display ? children : <Navigate to='/unauthorized' replace />
     }
 
-    // Cloud & Enterprise: Check both permissions and feature flags
-    if (isCloud || isEnterpriseLicensed) {
+    // Cloud & IAM: Check both permissions and feature flags
+    if (isCloud || isIamLicensed) {
         // Routes with display property - check feature flags
         if (display) {
             // Check if user has any permissions

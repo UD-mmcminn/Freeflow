@@ -55,7 +55,7 @@ const getPricing = async (req: Request, res: Response, next: NextFunction) => {
                 ]
             },
             {
-                title: 'Enterprise',
+                title: 'IAM',
                 subtitle: 'For large organizations',
                 price: 'Contact Us',
                 features: [

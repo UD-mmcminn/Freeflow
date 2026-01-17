@@ -1,0 +1,36 @@
+{
+    "name": "Flowise Dev",
+    "build": {
+        "dockerfile": "Dockerfile"
+    },
+    "remoteUser": "vscode",
+    "init": true,
+    "postCreateCommand": "corepack enable && pnpm install",
+    "forwardPorts": [3000, 8080, 5173],
+    "portsAttributes": {
+        "3000": { "label": "Flowise server" },
+        "8080": { "label": "Flowise dev proxy" },
+        "5173": { "label": "Vite dev server" }
+    },
+    "remoteEnv": {
+        "PUPPETEER_SKIP_DOWNLOAD": "true",
+        "PUPPETEER_EXECUTABLE_PATH": "/usr/bin/chromium",
+        "NODE_OPTIONS": "--max-old-space-size=8192"
+    },
+    "customizations": {
+        "vscode": {
+            "settings": {
+                "editor.formatOnSave": true
+            },
+            "extensions": [
+                "dbaeumer.vscode-eslint",
+                "esbenp.prettier-vscode",
+                "ms-azuretools.vscode-docker",
+                "ms-vsliveshare.vsliveshare"
+            ]
+        }
+    },
+    "mounts": [
+        "source=flowise-pnpm-store,target=/home/vscode/.local/share/pnpm/store,type=volume,uid=1000,gid=1000"
+    ]
+}

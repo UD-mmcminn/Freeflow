@@ -1,48 +1,31 @@
-/**
- * Copyright (c) 2023-present FlowiseAI, Inc.
- *
- * The Enterprise and Cloud versions of Flowise are licensed under the [Commercial License](https://github.com/FlowiseAI/Flowise/tree/main/packages/server/src/enterprise/LICENSE.md).
- * Unauthorized copying, modification, distribution, or use of the Enterprise and Cloud versions is strictly prohibited without a valid license agreement from FlowiseAI, Inc.
- *
- * The Open Source version is licensed under the Apache License, Version 2.0 (the "License")
- *
- * For information about licensing of the Enterprise and Cloud versions, please contact:
- * security@flowiseai.com
- */
-
-import axios from 'axios'
 import express, { Application, NextFunction, Request, Response } from 'express'
-import * as fs from 'fs'
 import { StatusCodes } from 'http-status-codes'
-import jwt from 'jsonwebtoken'
-import path from 'path'
-import { LoginMethodStatus } from './enterprise/database/entities/login-method.entity'
-import { ErrorMessage, LoggedInUser } from './enterprise/Interface.Enterprise'
-import { Permissions } from './enterprise/rbac/Permissions'
-import { LoginMethodService } from './enterprise/services/login-method.service'
-import { OrganizationService } from './enterprise/services/organization.service'
-import Auth0SSO from './enterprise/sso/Auth0SSO'
-import AzureSSO from './enterprise/sso/AzureSSO'
-import GithubSSO from './enterprise/sso/GithubSSO'
-import GoogleSSO from './enterprise/sso/GoogleSSO'
-import SSOBase from './enterprise/sso/SSOBase'
+import { LoginMethodStatus } from './iam/database/entities/login-method.entity'
+import { ErrorMessage, LoggedInUser } from './iam/Interface.Iam'
+import { Permissions } from './iam/rbac/Permissions'
+import { LoginMethodService } from './iam/services/login-method.service'
+import { OrganizationService } from './iam/services/organization.service'
+import Auth0SSO from './iam/sso/Auth0SSO'
+import AzureSSO from './iam/sso/AzureSSO'
+import GithubSSO from './iam/sso/GithubSSO'
+import GoogleSSO from './iam/sso/GoogleSSO'
+import SSOBase from './iam/sso/SSOBase'
 import { InternalFlowiseError } from './errors/internalFlowiseError'
 import { Platform, UserPlan } from './Interface'
 import { StripeManager } from './StripeManager'
 import { UsageCacheManager } from './UsageCacheManager'
 import { GeneralErrorMessage, LICENSE_QUOTAS } from './utils/constants'
 import { getRunningExpressApp } from './utils/getRunningExpressApp'
-import { ENTERPRISE_FEATURE_FLAGS } from './utils/quotaUsage'
+import { IAM_FEATURE_FLAGS } from './utils/quotaUsage'
 import Stripe from 'stripe'
 
 const allSSOProviders = ['azure', 'google', 'auth0', 'github']
 export class IdentityManager {
     private static instance: IdentityManager
     private stripeManager?: StripeManager
-    licenseValid: boolean = false
     permissions: Permissions
     ssoProviderName: string = ''
-    currentInstancePlatform: Platform = Platform.OPEN_SOURCE
+    currentInstancePlatform: Platform = Platform.IAM
     // create a map to store the sso provider name and the sso provider instance
     ssoProviders: Map<string, SSOBase> = new Map()
 
@@ -55,7 +38,14 @@ export class IdentityManager {
     }
 
     public async initialize() {
-        await this._validateLicenseKey()
+        const platformEnv = process.env.PLATFORM_TYPE?.toLowerCase()
+        if (platformEnv === 'cloud') {
+            this.currentInstancePlatform = Platform.CLOUD
+        } else if (platformEnv === 'open_source' || platformEnv === 'open-source') {
+            this.currentInstancePlatform = Platform.OPEN_SOURCE
+        } else {
+            this.currentInstancePlatform = Platform.IAM
+        }
         this.permissions = new Permissions()
         if (process.env.STRIPE_SECRET_KEY) {
             this.stripeManager = await StripeManager.getInstance()
@@ -70,8 +60,8 @@ export class IdentityManager {
         return this.permissions
     }
 
-    public isEnterprise = () => {
-        return this.currentInstancePlatform === Platform.ENTERPRISE
+    public isIam = () => {
+        return this.currentInstancePlatform === Platform.IAM
     }
 
     public isCloud = () => {
@@ -82,89 +72,15 @@ export class IdentityManager {
         return this.currentInstancePlatform === Platform.OPEN_SOURCE
     }
 
-    public isLicenseValid = () => {
-        return this.licenseValid
-    }
-
-    private _offlineVerifyLicense(licenseKey: string): any {
-        try {
-            const publicKey = fs.readFileSync(path.join(__dirname, '../', 'src/enterprise/license/public.pem'), 'utf8')
-            const decoded = jwt.verify(licenseKey, publicKey, {
-                algorithms: ['RS256']
-            })
-            return decoded
-        } catch (error) {
-            console.error('Error verifying license key:', error)
-            return null
-        }
-    }
-
-    private _validateLicenseKey = async () => {
-        const LICENSE_URL = process.env.LICENSE_URL
-        const FLOWISE_EE_LICENSE_KEY = process.env.FLOWISE_EE_LICENSE_KEY
-
-        // First check if license key is missing
-        if (!FLOWISE_EE_LICENSE_KEY) {
-            this.licenseValid = false
-            this.currentInstancePlatform = Platform.OPEN_SOURCE
-            return
-        }
-
-        try {
-            if (process.env.OFFLINE === 'true') {
-                const decodedLicense = this._offlineVerifyLicense(FLOWISE_EE_LICENSE_KEY)
-
-                if (!decodedLicense) {
-                    this.licenseValid = false
-                } else {
-                    const issuedAtSeconds = decodedLicense.iat
-                    if (!issuedAtSeconds) {
-                        this.licenseValid = false
-                    } else {
-                        const issuedAt = new Date(issuedAtSeconds * 1000)
-                        const expiryDurationInMonths = decodedLicense.expiryDurationInMonths || 0
-
-                        const expiryDate = new Date(issuedAt)
-                        expiryDate.setMonth(expiryDate.getMonth() + expiryDurationInMonths)
-
-                        if (new Date() > expiryDate) {
-                            this.licenseValid = false
-                        } else {
-                            this.licenseValid = true
-                        }
-                    }
-                }
-                this.currentInstancePlatform = Platform.ENTERPRISE
-            } else if (LICENSE_URL) {
-                try {
-                    const response = await axios.post(`${LICENSE_URL}/enterprise/verify`, { license: FLOWISE_EE_LICENSE_KEY })
-                    this.licenseValid = response.data?.valid
-
-                    if (!LICENSE_URL.includes('api')) this.currentInstancePlatform = Platform.ENTERPRISE
-                    else if (LICENSE_URL.includes('v1')) this.currentInstancePlatform = Platform.ENTERPRISE
-                    else if (LICENSE_URL.includes('v2')) this.currentInstancePlatform = response.data?.platform
-                    else throw new InternalFlowiseError(StatusCodes.INTERNAL_SERVER_ERROR, GeneralErrorMessage.UNHANDLED_EDGE_CASE)
-                } catch (error) {
-                    console.error('Error verifying license key:', error)
-                    this.licenseValid = false
-                    this.currentInstancePlatform = Platform.ENTERPRISE
-                    return
-                }
-            }
-        } catch (error) {
-            this.licenseValid = false
-        }
-    }
-
     public initializeSSO = async (app: express.Application) => {
-        if (this.getPlatformType() === Platform.CLOUD || this.getPlatformType() === Platform.ENTERPRISE) {
+        if (this.getPlatformType() === Platform.CLOUD || this.getPlatformType() === Platform.IAM) {
             const loginMethodService = new LoginMethodService()
             let queryRunner
             try {
                 queryRunner = getRunningExpressApp().AppDataSource.createQueryRunner()
                 await queryRunner.connect()
                 let organizationId = undefined
-                if (this.getPlatformType() === Platform.ENTERPRISE) {
+                if (this.getPlatformType() === Platform.IAM) {
                     const organizationService = new OrganizationService()
                     const organizations = await organizationService.readOrganization(queryRunner)
                     if (organizations.length > 0) {
@@ -259,9 +175,9 @@ export class IdentityManager {
     }
 
     public async getFeaturesByPlan(subscriptionId: string, withoutCache: boolean = false) {
-        if (this.isEnterprise()) {
+        if (this.isIam()) {
             const features: Record<string, string> = {}
-            for (const feature of ENTERPRISE_FEATURE_FLAGS) {
+            for (const feature of IAM_FEATURE_FLAGS) {
                 features[feature] = 'true'
             }
             return features

@@ -5,7 +5,7 @@ import { LICENSE_QUOTAS } from './constants'
 import logger from './logger'
 
 type UsageType = 'flows' | 'users'
-export const ENTERPRISE_FEATURE_FLAGS = [
+export const IAM_FEATURE_FLAGS = [
     //'feat:account', // Only for Cloud
     'feat:datasets',
     'feat:evaluations',
