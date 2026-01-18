@@ -181,3 +181,31 @@ export interface IUserCredential {
     updatedDate: Date
     user?: IUser
 }
+
+export interface IAccountDescriptor {
+    user?: IUser
+    organization?: IOrganization
+    organizationUsers?: IOrganizationUser[]
+    workspaces?: IWorkspace[]
+    workspaceUsers?: IWorkspaceUser[]
+    roles?: IRole[]
+    loginMethods?: ILoginMethod[]
+    loginSessions?: ILoginSession[]
+    loginActivities?: ILoginActivity[]
+    credentials?: IUserCredential[]
+    invites?: IInvite[]
+}
+
+export type AccountDescriptorInput = Partial<IAccountDescriptor>
+
+export interface IInvite {
+    id: string
+    email: string
+    organizationId?: string
+    workspaceId?: string
+    roleId?: string
+    token?: string
+    expiresAt?: Date
+    acceptedAt?: Date
+    createdDate?: Date
+}
