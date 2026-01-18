@@ -20,6 +20,9 @@ export class WorkspaceUser implements IWorkspaceUser {
     @Column({ nullable: true, type: 'text' })
     roleId?: string
 
+    @Column({ type: 'varchar', length: 32, default: 'ACTIVE' })
+    status: 'PENDING' | 'ACTIVE' | 'DISABLED'
+
     @CreateDateColumn({ type: 'timestamp' })
     createdDate: Date
 
