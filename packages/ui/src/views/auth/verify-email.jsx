@@ -19,7 +19,7 @@ import { useState } from 'react'
 import { IconX } from '@tabler/icons-react'
 
 const VerifyEmail = () => {
-    const accountVerifyApi = useApi(accountApi.verifyAccountEmail)
+    const acceptInviteApi = useApi(accountApi.acceptInvite)
 
     const [searchParams] = useSearchParams()
     const [loading, setLoading] = useState(false)
@@ -30,7 +30,7 @@ const VerifyEmail = () => {
     const theme = useTheme()
 
     useEffect(() => {
-        if (accountVerifyApi.data) {
+        if (acceptInviteApi.data) {
             setLoading(false)
             setVerificationError('')
             setVerificationSuccess(true)
@@ -39,15 +39,15 @@ const VerifyEmail = () => {
             }, 3000)
         }
         // eslint-disable-next-line react-hooks/exhaustive-deps
-    }, [accountVerifyApi.data])
+    }, [acceptInviteApi.data])
 
     useEffect(() => {
-        if (accountVerifyApi.error) {
+        if (acceptInviteApi.error) {
             setLoading(false)
-            setVerificationError(accountVerifyApi.error)
+            setVerificationError(acceptInviteApi.error)
             setVerificationSuccess(false)
         }
-    }, [accountVerifyApi.error])
+    }, [acceptInviteApi.error])
 
     useEffect(() => {
         const token = searchParams.get('token')
@@ -55,7 +55,7 @@ const VerifyEmail = () => {
             setLoading(true)
             setVerificationError('')
             setVerificationSuccess(false)
-            accountVerifyApi.request({ user: { tempToken: token } })
+            acceptInviteApi.request({ token })
         }
         // eslint-disable-next-line react-hooks/exhaustive-deps
     }, [])
@@ -73,7 +73,7 @@ const VerifyEmail = () => {
                                         height: '48px'
                                     }}
                                 />
-                                <Typography variant='h1'>Verifying Email...</Typography>
+                                <Typography variant='h1'>Accepting Invite...</Typography>
                             </>
                         )}
                         {verificationError && (
@@ -92,7 +92,7 @@ const VerifyEmail = () => {
                                 >
                                     <IconX />
                                 </Box>
-                                <Typography variant='h1'>Verification Failed.</Typography>
+                                <Typography variant='h1'>Invite Acceptance Failed.</Typography>
                             </>
                         )}
                         {verificationSuccess && (
@@ -111,7 +111,7 @@ const VerifyEmail = () => {
                                 >
                                     <IconCheck />
                                 </Box>
-                                <Typography variant='h1'>Email Verified Successfully.</Typography>
+                                <Typography variant='h1'>Invite Accepted Successfully.</Typography>
                             </>
                         )}
                     </Stack>

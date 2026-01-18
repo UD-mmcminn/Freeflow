@@ -70,7 +70,7 @@ const SignInPage = () => {
     const getDefaultProvidersApi = useApi(loginMethodApi.getDefaultLoginMethods)
     const navigate = useNavigate()
     const location = useLocation()
-    const resendVerificationApi = useApi(accountApi.resendVerificationEmail)
+    const resendInviteApi = useApi(accountApi.resendInvite)
 
     const doLogin = (event) => {
         event.preventDefault()
@@ -153,7 +153,7 @@ const SignInPage = () => {
     }, [getDefaultProvidersApi.data])
 
     useEffect(() => {
-        if (authError === 'User Email Unverified') {
+        if (authError === 'User Invite Pending' || authError === 'User Email Unverified') {
             setShowResendButton(true)
         } else {
             setShowResendButton(false)
@@ -164,14 +164,14 @@ const SignInPage = () => {
         window.location.href = `/api/v1/${ssoProvider}/login`
     }
 
-    const handleResendVerification = async () => {
+    const handleResendInvite = async () => {
         try {
-            await resendVerificationApi.request({ email: usernameVal })
+            await resendInviteApi.request({ email: usernameVal })
             setAuthError(undefined)
-            setSuccessMessage('Verification email has been sent successfully.')
+            setSuccessMessage('Invite email has been sent successfully.')
             setShowResendButton(false)
         } catch (error) {
-            setAuthError(error.response?.data?.message || 'Failed to send verification email.')
+            setAuthError(error.response?.data?.message || 'Failed to send invite email.')
         }
     }
 
@@ -196,8 +196,8 @@ const SignInPage = () => {
                     )}
                     {showResendButton && (
                         <Stack sx={{ gap: 1 }}>
-                            <Button variant='text' onClick={handleResendVerification}>
-                                Resend Verification Email
+                            <Button variant='text' onClick={handleResendInvite}>
+                                Resend Invite Email
                             </Button>
                         </Stack>
                     )}
