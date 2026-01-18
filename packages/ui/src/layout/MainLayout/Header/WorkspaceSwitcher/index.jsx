@@ -24,7 +24,7 @@ import { alpha, styled } from '@mui/material/styles'
 // api
 import userApi from '@/api/user'
 import workspaceApi from '@/api/workspace'
-import accountApi from '@/api/account.api'
+import authApi from '@/api/auth'
 
 // hooks
 import useApi from '@/hooks/useApi'
@@ -79,7 +79,7 @@ const WorkspaceSwitcher = () => {
     const isAuthenticated = useSelector((state) => state.auth.isAuthenticated)
     const features = useSelector((state) => state.auth.features)
 
-    const { isIamLicensed } = useConfig()
+    const { isIam } = useConfig()
 
     const [anchorEl, setAnchorEl] = useState(null)
     const open = Boolean(anchorEl)
@@ -95,7 +95,8 @@ const WorkspaceSwitcher = () => {
     const getWorkspacesByOrganizationIdUserIdApi = useApi(userApi.getWorkspacesByOrganizationIdUserId)
     const getWorkspacesByUserIdApi = useApi(userApi.getWorkspacesByUserId)
     const switchWorkspaceApi = useApi(workspaceApi.switchWorkspace)
-    const logoutApi = useApi(accountApi.logout)
+    const logoutApi = useApi(authApi.logout)
+    const sessionToken = useSelector((state) => state.auth.token)
 
     const handleClick = (event) => {
         setAnchorEl(event.currentTarget)
@@ -114,7 +115,12 @@ const WorkspaceSwitcher = () => {
     }
 
     const handleLogout = () => {
-        logoutApi.request()
+        if (!sessionToken) {
+            store.dispatch(logoutSuccess())
+            window.location.href = '/login'
+            return
+        }
+        logoutApi.request({ sessionToken })
     }
 
     useEffect(() => {
@@ -124,7 +130,7 @@ const WorkspaceSwitcher = () => {
             if (Object.hasOwnProperty.call(features, WORKSPACE_FLAG)) {
                 const flag = features[WORKSPACE_FLAG] === 'true' || features[WORKSPACE_FLAG] === true
                 if (flag) {
-                    if (isIamLicensed) {
+                    if (isIam) {
                         getWorkspacesByOrganizationIdUserIdApi.request(user.activeOrganizationId, user.id)
                     } else {
                         getWorkspacesByUserIdApi.request(user.id)
@@ -134,7 +140,7 @@ const WorkspaceSwitcher = () => {
         }
 
         // eslint-disable-next-line react-hooks/exhaustive-deps
-    }, [isAuthenticated, user, features, isIamLicensed])
+    }, [isAuthenticated, user, features, isIam])
 
     useEffect(() => {
         if (getWorkspacesByOrganizationIdUserIdApi.data) {
@@ -204,9 +210,9 @@ const WorkspaceSwitcher = () => {
 
     useEffect(() => {
         try {
-            if (logoutApi.data && logoutApi.data.message === 'logged_out') {
+            if (logoutApi.data && (logoutApi.data.message === 'logged_out' || logoutApi.data.message === 'Logged out')) {
                 store.dispatch(logoutSuccess())
-                window.location.href = logoutApi.data.redirectTo
+                window.location.href = logoutApi.data.redirectTo ?? '/login'
             }
         } catch (e) {
             console.error(e)
@@ -364,7 +370,7 @@ const WorkspaceSwitcher = () => {
                     <Stack spacing={3}>
                         <Typography variant='h5'>Workspace Switch Error</Typography>
                         <Typography variant='body1'>{errorMessage}</Typography>
-                        {isIamLicensed && (
+                        {isIam && (
                             <Typography variant='body2' color='text.secondary'>
                                 Please contact your administrator for assistance.
                             </Typography>

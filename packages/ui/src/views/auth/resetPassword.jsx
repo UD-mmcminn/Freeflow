@@ -56,14 +56,16 @@ const ResetPasswordPage = () => {
         placeholder: '********'
     }
 
+    const [params] = useSearchParams()
+    const token = params.get('token')
+    const mode = params.get('mode')
+    const isInviteFlow = mode === 'invite'
+
     const resetPasswordInput = {
-        label: 'Reset Token',
+        label: isInviteFlow ? 'Invite Token' : 'Reset Token',
         name: 'resetToken',
         type: 'text'
     }
-
-    const [params] = useSearchParams()
-    const token = params.get('token')
 
     const [emailVal, setEmailVal] = useState('')
     const [newPasswordVal, setNewPasswordVal] = useState('')
@@ -112,7 +114,7 @@ const ResetPasswordPage = () => {
             setLoading(false)
             if (updateResponse.data) {
                 enqueueSnackbar({
-                    message: 'Password reset successful',
+                    message: isInviteFlow ? 'Password set successfully' : 'Password reset successful',
                     options: {
                         key: new Date().getTime() + Math.random(),
                         variant: 'success',
@@ -172,7 +174,7 @@ const ResetPasswordPage = () => {
                         </Alert>
                     )}
                     <Stack sx={{ gap: 1 }}>
-                        <Typography variant='h1'>Reset Password</Typography>
+                        <Typography variant='h1'>{isInviteFlow ? 'Set Password' : 'Reset Password'}</Typography>
                         <Typography variant='body2' sx={{ color: theme.palette.grey[600] }}>
                             <Link style={{ color: theme.palette.primary.main }} to='/signin'>
                                 Back to Login
@@ -182,32 +184,35 @@ const ResetPasswordPage = () => {
                     </Stack>
                     <form onSubmit={validateAndSubmit}>
                         <Stack sx={{ width: '100%', flexDirection: 'column', alignItems: 'left', justifyContent: 'center', gap: 2 }}>
+                            {!isInviteFlow && (
+                                <Box>
+                                    <div style={{ display: 'flex', flexDirection: 'row' }}>
+                                        <Typography>
+                                            Email<span style={{ color: 'red' }}>&nbsp;*</span>
+                                        </Typography>
+                                        <Typography align='left'></Typography>
+                                        <div style={{ flexGrow: 1 }}></div>
+                                    </div>
+                                    <Input
+                                        inputParam={emailInput}
+                                        onChange={(newValue) => setEmailVal(newValue)}
+                                        value={emailVal}
+                                        showDialog={false}
+                                    />
+                                </Box>
+                            )}
                             <Box>
                                 <div style={{ display: 'flex', flexDirection: 'row' }}>
                                     <Typography>
-                                        Email<span style={{ color: 'red' }}>&nbsp;*</span>
-                                    </Typography>
-                                    <Typography align='left'></Typography>
-                                    <div style={{ flexGrow: 1 }}></div>
-                                </div>
-                                <Input
-                                    inputParam={emailInput}
-                                    onChange={(newValue) => setEmailVal(newValue)}
-                                    value={emailVal}
-                                    showDialog={false}
-                                />
-                            </Box>
-                            <Box>
-                                <div style={{ display: 'flex', flexDirection: 'row' }}>
-                                    <Typography>
-                                        Reset Token<span style={{ color: 'red' }}>&nbsp;*</span>
+                                    {isInviteFlow ? 'Invite Token' : 'Reset Token'}
+                                    <span style={{ color: 'red' }}>&nbsp;*</span>
                                     </Typography>
                                     <div style={{ flexGrow: 1 }}></div>
                                 </div>
                                 <OutlinedInput
                                     fullWidth
                                     type='string'
-                                    placeholder='Paste in the reset token.'
+                                    placeholder={isInviteFlow ? 'Paste in the invite token.' : 'Paste in the reset token.'}
                                     multiline={true}
                                     rows={3}
                                     inputParam={resetPasswordInput}
@@ -216,13 +221,17 @@ const ResetPasswordPage = () => {
                                     sx={{ mt: '8px' }}
                                 />
                                 <Typography variant='caption'>
-                                    <i>Please copy the token you received in your email.</i>
+                                    <i>
+                                        {isInviteFlow
+                                            ? 'Please copy the token you received in your invite email.'
+                                            : 'Please copy the token you received in your email.'}
+                                    </i>
                                 </Typography>
                             </Box>
                             <Box>
                                 <div style={{ display: 'flex', flexDirection: 'row' }}>
                                     <Typography>
-                                        New Password<span style={{ color: 'red' }}>&nbsp;*</span>
+                                    New Password<span style={{ color: 'red' }}>&nbsp;*</span>
                                     </Typography>
                                     <Typography align='left'></Typography>
                                     <div style={{ flexGrow: 1 }}></div>
@@ -259,7 +268,7 @@ const ResetPasswordPage = () => {
                             </Box>
 
                             <StyledButton variant='contained' style={{ borderRadius: 12, height: 40, marginRight: 5 }} type='submit'>
-                                Update Password
+                                {isInviteFlow ? 'Set Password' : 'Update Password'}
                             </StyledButton>
                         </Stack>
                     </form>

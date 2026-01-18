@@ -24,6 +24,7 @@ import ssoApi from '@/api/sso'
 
 // utils
 import useNotifier from '@/utils/useNotifier'
+import AuthUtils from '@/utils/authUtils'
 
 // store
 import { loginSuccess, logoutSuccess } from '@/store/reducers/authSlice'
@@ -41,7 +42,7 @@ const SignInPage = () => {
     const theme = useTheme()
     useSelector((state) => state.customization)
     useNotifier()
-    const { isIamLicensed, isCloud, isOpenSource } = useConfig()
+    const { isIam, isCloud, isOpenSource } = useConfig()
 
     const usernameInput = {
         label: 'Username',
@@ -116,7 +117,10 @@ const SignInPage = () => {
     useEffect(() => {
         if (loginApi.data) {
             setLoading(false)
-            store.dispatch(loginSuccess(loginApi.data))
+            const payload = loginApi.data?.session
+                ? AuthUtils.buildSessionAuthPayload(loginApi.data.session, usernameVal)
+                : loginApi.data
+            store.dispatch(loginSuccess(payload))
             navigate(location.state?.path || '/')
             //navigate(0)
         }
@@ -211,18 +215,18 @@ const SignInPage = () => {
                         <Typography variant='h1'>Sign In</Typography>
                         {isCloud && (
                             <Typography variant='body2' sx={{ color: theme.palette.grey[600] }}>
-                                Don&apos;t have an account?{' '}
+                                Need access?{' '}
                                 <Link style={{ color: `${theme.palette.primary.main}` }} to='/register'>
-                                    Sign up for free
+                                    Request an invite
                                 </Link>
                                 .
                             </Typography>
                         )}
-                        {isIamLicensed && (
+                        {isIam && (
                             <Typography variant='body2' sx={{ color: theme.palette.grey[600] }}>
-                                Have an invite code?{' '}
+                                Need access?{' '}
                                 <Link style={{ color: `${theme.palette.primary.main}` }} to='/register'>
-                                    Sign up for an account
+                                    Request an invite
                                 </Link>
                                 .
                             </Typography>

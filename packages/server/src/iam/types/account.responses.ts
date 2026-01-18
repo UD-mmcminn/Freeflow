@@ -2,6 +2,7 @@ import { IAccountDescriptor } from '../Interface.Iam'
 
 export interface AccountResponse {
     account: IAccountDescriptor
+    message?: string
 }
 
 export interface AccountNotFoundResponse {

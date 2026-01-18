@@ -25,7 +25,7 @@ import { enqueueSnackbar as enqueueSnackbarAction, closeSnackbar as closeSnackba
 import { logoutSuccess } from '@/store/reducers/authSlice'
 
 // API
-import accountApi from '@/api/account.api'
+import authApi from '@/api/auth'
 
 // Hooks
 import useApi from '@/hooks/useApi'
@@ -147,11 +147,12 @@ const Header = ({ handleLeftDrawerToggle }) => {
     const navigate = useNavigate()
 
     const customization = useSelector((state) => state.customization)
-    const logoutApi = useApi(accountApi.logout)
+    const logoutApi = useApi(authApi.logout)
+    const sessionToken = useSelector((state) => state.auth.token)
 
     const [isDark, setIsDark] = useState(customization.isDarkMode)
     const dispatch = useDispatch()
-    const { isIamLicensed, isCloud, isOpenSource } = useConfig()
+    const { isIam, isCloud, isOpenSource } = useConfig()
     const currentUser = useSelector((state) => state.auth.user)
     const isAuthenticated = useSelector((state) => state.auth.isAuthenticated)
     const [isPricingOpen, setIsPricingOpen] = useState(false)
@@ -169,7 +170,12 @@ const Header = ({ handleLeftDrawerToggle }) => {
     }
 
     const signOutClicked = () => {
-        logoutApi.request()
+        if (!sessionToken) {
+            store.dispatch(logoutSuccess())
+            window.location.href = '/login'
+            return
+        }
+        logoutApi.request({ sessionToken })
         enqueueSnackbar({
             message: 'Logging out...',
             options: {
@@ -186,9 +192,9 @@ const Header = ({ handleLeftDrawerToggle }) => {
 
     useEffect(() => {
         try {
-            if (logoutApi.data && logoutApi.data.message === 'logged_out') {
+            if (logoutApi.data && (logoutApi.data.message === 'logged_out' || logoutApi.data.message === 'Logged out')) {
                 store.dispatch(logoutSuccess())
-                window.location.href = logoutApi.data.redirectTo
+                window.location.href = logoutApi.data.redirectTo ?? '/login'
             }
         } catch (e) {
             console.error(e)
@@ -268,7 +274,7 @@ const Header = ({ handleLeftDrawerToggle }) => {
             ) : (
                 <Box sx={{ flexGrow: 1 }} />
             )}
-            {isIamLicensed && isAuthenticated && <WorkspaceSwitcher />}
+            {isIam && isAuthenticated && <WorkspaceSwitcher />}
             {isCloud && isAuthenticated && <OrgWorkspaceBreadcrumbs />}
             {isCloud && currentUser?.isOrganizationAdmin && (
                 <Button

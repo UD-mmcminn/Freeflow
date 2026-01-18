@@ -8,5 +8,7 @@ router.post('/invite', controller.createInvite.bind(controller))
 router.post('/register', controller.registerUser.bind(controller))
 router.post('/accept-invite', controller.acceptInvite.bind(controller))
 router.post('/resend-invite', controller.resendInvite.bind(controller))
+router.post('/forgot-password', controller.forgotPassword.bind(controller))
+router.post('/reset-password', controller.resetPassword.bind(controller))
 
 export default router

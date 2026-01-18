@@ -12,17 +12,13 @@ import { BackdropLoader } from '@/ui-component/loading/BackdropLoader'
 
 // API
 import accountApi from '@/api/account.api'
-import authApi from '@/api/auth'
 import loginMethodApi from '@/api/loginmethod'
 
 // Hooks
 import useApi from '@/hooks/useApi'
-import { store } from '@/store'
-import { loginSuccess } from '@/store/reducers/authSlice'
 
 // utils
 import useNotifier from '@/utils/useNotifier'
-import { passwordSchema } from '@/utils/validation'
 
 // Icons
 import Auth0SSOLoginIcon from '@/assets/images/auth0.svg'
@@ -35,48 +31,20 @@ import { IconCircleCheck, IconExclamationCircle } from '@tabler/icons-react'
 
 // IMPORTANT: when updating this schema, update the schema on the server as well
 // packages/server/src/iam/Interface.Iam.ts
-const OrgSetupSchema = z
-    .object({
-        username: z.string().min(1, 'Name is required'),
-        email: z.string().min(1, 'Email is required').email('Invalid email address'),
-        password: passwordSchema,
-        confirmPassword: z.string().min(1, 'Confirm Password is required')
-    })
-    .refine((data) => data.password === data.confirmPassword, {
-        message: "Passwords don't match",
-        path: ['confirmPassword']
-    })
+const OrgSetupSchema = z.object({
+    username: z.string().min(1, 'Name is required'),
+    email: z.string().min(1, 'Email is required').email('Invalid email address')
+})
 
 const OrganizationSetupPage = () => {
     useNotifier()
-    const { isIamLicensed, isOpenSource } = useConfig()
-
-    const orgNameInput = {
-        label: 'Organization',
-        name: 'organization',
-        type: 'text',
-        placeholder: 'Acme'
-    }
+    const { isIam, isOpenSource } = useConfig()
 
     const usernameInput = {
         label: 'Username',
         name: 'username',
         type: 'text',
         placeholder: 'John Doe'
-    }
-
-    const passwordInput = {
-        label: 'Password',
-        name: 'password',
-        type: 'password',
-        placeholder: '********'
-    }
-
-    const confirmPasswordInput = {
-        label: 'Confirm Password',
-        name: 'confirmPassword',
-        type: 'password',
-        placeholder: '********'
     }
 
     const emailInput = {
@@ -87,10 +55,7 @@ const OrganizationSetupPage = () => {
     }
 
     const [email, setEmail] = useState('')
-    const [password, setPassword] = useState('')
-    const [confirmPassword, setConfirmPassword] = useState('')
     const [username, setUsername] = useState('')
-    const [orgName, setOrgName] = useState('')
     const [existingUsername, setExistingUsername] = useState('')
     const [existingPassword, setExistingPassword] = useState('')
 
@@ -99,7 +64,6 @@ const OrganizationSetupPage = () => {
     const [successMsg, setSuccessMsg] = useState(undefined)
     const [requiresAuthentication, setRequiresAuthentication] = useState(false)
 
-    const loginApi = useApi(authApi.login)
     const registerAccountApi = useApi(accountApi.registerAccount)
     const getBasicAuthApi = useApi(accountApi.getBasicAuth)
     const navigate = useNavigate()
@@ -110,11 +74,8 @@ const OrganizationSetupPage = () => {
     const register = async (event) => {
         event.preventDefault()
         const result = OrgSetupSchema.safeParse({
-            orgName,
             username,
-            email,
-            password,
-            confirmPassword
+            email
         })
         if (result.success) {
             setLoading(true)
@@ -145,13 +106,7 @@ const OrganizationSetupPage = () => {
                 user: {
                     name: username,
                     email: email,
-                    type: 'pro',
-                    credential: password
-                }
-            }
-            if (isIamLicensed) {
-                body.organization = {
-                    name: orgName
+                    type: 'pro'
                 }
             }
             await registerAccountApi.request(body)
@@ -169,10 +124,10 @@ const OrganizationSetupPage = () => {
                     ? registerAccountApi.error.response.data.message
                     : registerAccountApi.error.response.data
             let finalErrMessage = ''
-            if (isIamLicensed) {
-                finalErrMessage = `Error in registering organization. Please contact your administrator. (${errMessage})`
+            if (isIam) {
+                finalErrMessage = `Error sending admin invite. Please contact your administrator. (${errMessage})`
             } else {
-                finalErrMessage = `Error in registering account: ${errMessage}`
+                finalErrMessage = `Error sending invite: ${errMessage}`
             }
             setAuthError(finalErrMessage)
             setLoading(false)
@@ -204,33 +159,15 @@ const OrganizationSetupPage = () => {
     useEffect(() => {
         if (registerAccountApi.data) {
             setAuthError(undefined)
-            setConfirmPassword('')
-            setPassword('')
             setUsername('')
             setEmail('')
-            setSuccessMsg(registerAccountApi.data.message)
+            setSuccessMsg('Invite sent. Please check your email to continue setup.')
             setTimeout(() => {
-                const body = {
-                    email,
-                    password
-                }
-                loginApi.request(body)
-            }, 1000)
+                navigate('/signin')
+            }, 3000)
         }
         // eslint-disable-next-line react-hooks/exhaustive-deps
     }, [registerAccountApi.data])
-
-    useEffect(() => {
-        if (loginApi.data) {
-            setLoading(false)
-            store.dispatch(loginSuccess(loginApi.data))
-            localStorage.setItem('username', loginApi.data.name)
-            navigate(location.state?.path || '/')
-            //navigate(0)
-        }
-
-        // eslint-disable-next-line react-hooks/exhaustive-deps
-    }, [loginApi.data])
 
     const signInWithSSO = (ssoProvider) => {
         window.location.href = `/api/v1/${ssoProvider}/login`
@@ -269,14 +206,14 @@ const OrganizationSetupPage = () => {
                         </Alert>
                     )}
                     <Stack sx={{ gap: 1 }}>
-                        <Typography variant='h1'>Setup Account</Typography>
+                        <Typography variant='h1'>Request Admin Invite</Typography>
                     </Stack>
                     {requiresAuthentication && (
                         <Alert severity='info'>
                             Application authentication now requires email and password. Contact administrator to setup an account.
                         </Alert>
                     )}
-                    {(isOpenSource || isIamLicensed) && (
+                    {(isOpenSource || isIam) && (
                         <Typography variant='caption'>
                             Account setup does not make any external connections, your data stays securely on your locally hosted server.
                         </Typography>
@@ -325,29 +262,12 @@ const OrganizationSetupPage = () => {
                                     </Divider>
                                 </>
                             )}
-                            {isIamLicensed && (
-                                <>
-                                    <Box>
-                                        <div style={{ display: 'flex', flexDirection: 'row' }}>
-                                            <Typography>
-                                                Organization Name:<span style={{ color: 'red' }}>&nbsp;*</span>
-                                            </Typography>
-                                            <div style={{ flexGrow: 1 }}></div>
-                                        </div>
-                                        <Input
-                                            inputParam={orgNameInput}
-                                            placeholder='Organization Name'
-                                            onChange={(newValue) => setOrgName(newValue)}
-                                            value={orgName}
-                                            showDialog={false}
-                                        />
-                                    </Box>
-                                    <Box>
-                                        <Divider>
-                                            <Chip label='Account Administrator' size='small' />
-                                        </Divider>
-                                    </Box>
-                                </>
+                            {isIam && (
+                                <Box>
+                                    <Divider>
+                                        <Chip label='Account Administrator' size='small' />
+                                    </Divider>
+                                </Box>
                             )}
                             <Box>
                                 <div style={{ display: 'flex', flexDirection: 'row' }}>
@@ -382,38 +302,7 @@ const OrganizationSetupPage = () => {
                                     showDialog={false}
                                 />
                                 <Typography variant='caption'>
-                                    <i>Kindly use a valid email address. Will be used as login id.</i>
-                                </Typography>
-                            </Box>
-                            <Box>
-                                <div style={{ display: 'flex', flexDirection: 'row' }}>
-                                    <Typography>
-                                        Password<span style={{ color: 'red' }}>&nbsp;*</span>
-                                    </Typography>
-                                    <div style={{ flexGrow: 1 }}></div>
-                                </div>
-                                <Input inputParam={passwordInput} onChange={(newValue) => setPassword(newValue)} value={password} />
-                                <Typography variant='caption'>
-                                    <i>
-                                        Password must be at least 8 characters long and contain at least one lowercase letter, one uppercase
-                                        letter, one digit, and one special character.
-                                    </i>
-                                </Typography>
-                            </Box>
-                            <Box>
-                                <div style={{ display: 'flex', flexDirection: 'row' }}>
-                                    <Typography>
-                                        Confirm Password<span style={{ color: 'red' }}>&nbsp;*</span>
-                                    </Typography>
-                                    <div style={{ flexGrow: 1 }}></div>
-                                </div>
-                                <Input
-                                    inputParam={confirmPasswordInput}
-                                    onChange={(newValue) => setConfirmPassword(newValue)}
-                                    value={confirmPassword}
-                                />
-                                <Typography variant='caption'>
-                                    <i>Reconfirm your password. Must match the password typed above.</i>
+                                    <i>We will send an invite link to this email to complete setup.</i>
                                 </Typography>
                             </Box>
                             <StyledButton
@@ -422,7 +311,7 @@ const OrganizationSetupPage = () => {
                                 type='submit'
                                 disabled={requiresAuthentication && (!existingUsername || !existingPassword)}
                             >
-                                Sign Up
+                                Send Invite
                             </StyledButton>
                             {configuredSsoProviders && configuredSsoProviders.length > 0 && <Divider sx={{ width: '100%' }}>OR</Divider>}
                             {configuredSsoProviders &&
@@ -441,7 +330,7 @@ const OrganizationSetupPage = () => {
                                                     </Icon>
                                                 }
                                             >
-                                                Sign Up With Microsoft
+                                                Continue With Microsoft
                                             </Button>
                                         )
                                 )}
@@ -460,7 +349,7 @@ const OrganizationSetupPage = () => {
                                                     </Icon>
                                                 }
                                             >
-                                                Sign Up With Google
+                                                Continue With Google
                                             </Button>
                                         )
                                 )}
@@ -479,7 +368,7 @@ const OrganizationSetupPage = () => {
                                                     </Icon>
                                                 }
                                             >
-                                                Sign Up With Auth0 by Okta
+                                                Continue With Auth0 by Okta
                                             </Button>
                                         )
                                 )}

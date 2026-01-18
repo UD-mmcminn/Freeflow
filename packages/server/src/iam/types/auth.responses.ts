@@ -10,4 +10,5 @@ export interface RefreshTokenResponse {
 
 export interface LogoutResponse {
     message: string
+    redirectTo?: string
 }

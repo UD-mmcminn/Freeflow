@@ -8,55 +8,28 @@ import { Stack, Typography, Box, useTheme, CircularProgress } from '@mui/materia
 import MainCard from '@/ui-component/cards/MainCard'
 
 // API
-import accountApi from '@/api/account.api'
-
-// Hooks
-import useApi from '@/hooks/useApi'
-
 // icons
-import { IconCheck } from '@tabler/icons-react'
 import { useState } from 'react'
 import { IconX } from '@tabler/icons-react'
 
 const VerifyEmail = () => {
-    const acceptInviteApi = useApi(accountApi.acceptInvite)
-
     const [searchParams] = useSearchParams()
     const [loading, setLoading] = useState(false)
     const [verificationError, setVerificationError] = useState('')
-    const [verificationSuccess, setVerificationSuccess] = useState(false)
     const navigate = useNavigate()
 
     const theme = useTheme()
-
-    useEffect(() => {
-        if (acceptInviteApi.data) {
-            setLoading(false)
-            setVerificationError('')
-            setVerificationSuccess(true)
-            setTimeout(() => {
-                navigate('/signin')
-            }, 3000)
-        }
-        // eslint-disable-next-line react-hooks/exhaustive-deps
-    }, [acceptInviteApi.data])
-
-    useEffect(() => {
-        if (acceptInviteApi.error) {
-            setLoading(false)
-            setVerificationError(acceptInviteApi.error)
-            setVerificationSuccess(false)
-        }
-    }, [acceptInviteApi.error])
 
     useEffect(() => {
         const token = searchParams.get('token')
         if (token) {
             setLoading(true)
             setVerificationError('')
-            setVerificationSuccess(false)
-            acceptInviteApi.request({ token })
+            navigate(`/reset-password?token=${encodeURIComponent(token)}&mode=invite`)
+            return
         }
+        setLoading(false)
+        setVerificationError('Invite token is missing.')
         // eslint-disable-next-line react-hooks/exhaustive-deps
     }, [])
 
@@ -73,7 +46,7 @@ const VerifyEmail = () => {
                                         height: '48px'
                                     }}
                                 />
-                                <Typography variant='h1'>Accepting Invite...</Typography>
+                                <Typography variant='h1'>Redirecting to set your password...</Typography>
                             </>
                         )}
                         {verificationError && (
@@ -92,26 +65,7 @@ const VerifyEmail = () => {
                                 >
                                     <IconX />
                                 </Box>
-                                <Typography variant='h1'>Invite Acceptance Failed.</Typography>
-                            </>
-                        )}
-                        {verificationSuccess && (
-                            <>
-                                <Box
-                                    sx={{
-                                        width: '48px',
-                                        height: '48px',
-                                        borderRadius: '100%',
-                                        backgroundColor: theme.palette.success.main,
-                                        color: 'white',
-                                        display: 'flex',
-                                        alignItems: 'center',
-                                        justifyContent: 'center'
-                                    }}
-                                >
-                                    <IconCheck />
-                                </Box>
-                                <Typography variant='h1'>Invite Accepted Successfully.</Typography>
+                                <Typography variant='h1'>Invite Link Error.</Typography>
                             </>
                         )}
                     </Stack>

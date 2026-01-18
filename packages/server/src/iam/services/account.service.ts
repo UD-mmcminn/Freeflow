@@ -11,6 +11,7 @@ import { User } from '../database/entities/user.entity'
 import { WorkspaceUser } from '../database/entities/workspace-user.entity'
 import { Workspace } from '../database/entities/workspace.entity'
 import { INotificationService, NotificationService } from './notification.service'
+import { ILocalAuthService, LocalAuthService } from './local-auth.service'
 import { In, IsNull } from 'typeorm'
 
 export interface IAccountService {
@@ -19,6 +20,7 @@ export interface IAccountService {
     createInvite(payload: AccountDescriptorInput): Promise<IAccountDescriptor>
     revokeInvite(inviteId: string): Promise<void>
     acceptInvite(token: string, payload: AccountDescriptorInput): Promise<IAccountDescriptor>
+    setPasswordFromInvite(token: string, password: string): Promise<IAccountDescriptor>
     resendInvite(payload: AccountDescriptorInput): Promise<void>
     getProfile(payload: AccountDescriptorInput): Promise<IAccountDescriptor | null>
     updateProfile(payload: AccountDescriptorInput): Promise<IAccountDescriptor | null>
@@ -28,9 +30,14 @@ export interface IAccountService {
 
 export class AccountService implements IAccountService {
     private notificationService: INotificationService
+    private localAuthService: ILocalAuthService
 
-    constructor(notificationService: INotificationService = new NotificationService()) {
+    constructor(
+        notificationService: INotificationService = new NotificationService(),
+        localAuthService: ILocalAuthService = new LocalAuthService()
+    ) {
         this.notificationService = notificationService
+        this.localAuthService = localAuthService
     }
 
     async createUser(payload: AccountDescriptorInput): Promise<IAccountDescriptor> {
@@ -246,6 +253,28 @@ export class AccountService implements IAccountService {
 
             return this.buildProfileWithManager(manager, user)
         })
+    }
+
+    async setPasswordFromInvite(token: string, password: string): Promise<IAccountDescriptor> {
+        if (!token) {
+            throw new InternalFlowiseError(StatusCodes.BAD_REQUEST, 'Invite token is required')
+        }
+        if (!password) {
+            throw new InternalFlowiseError(StatusCodes.BAD_REQUEST, 'Password is required')
+        }
+        let account: IAccountDescriptor = {}
+        try {
+            account = await this.acceptInvite(token, {})
+        } catch (error) {
+            if (
+                !(error instanceof InternalFlowiseError) ||
+                ![StatusCodes.NOT_FOUND, StatusCodes.GONE].includes(error.statusCode)
+            ) {
+                throw error
+            }
+        }
+        await this.localAuthService.resetPassword(token, password)
+        return account
     }
 
     async resendInvite(payload: AccountDescriptorInput): Promise<void> {

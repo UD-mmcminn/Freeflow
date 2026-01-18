@@ -1,9 +1,9 @@
 import { useEffect, useState } from 'react'
-import { Link, useNavigate, useSearchParams } from 'react-router-dom'
+import { Link, useNavigate } from 'react-router-dom'
 import { z } from 'zod'
 
 // material-ui
-import { Alert, Box, Button, Divider, Icon, List, ListItemText, OutlinedInput, Stack, Typography, useTheme } from '@mui/material'
+import { Alert, Box, Button, Divider, Icon, List, ListItemText, Stack, Typography, useTheme } from '@mui/material'
 
 // project imports
 import { StyledButton } from '@/ui-component/button/StyledButton'
@@ -22,7 +22,6 @@ import { useError } from '@/store/context/ErrorContext'
 
 // utils
 import useNotifier from '@/utils/useNotifier'
-import { passwordSchema } from '@/utils/validation'
 
 // Icons
 import Auth0SSOLoginIcon from '@/assets/images/auth0.svg'
@@ -37,55 +36,26 @@ import { IconCircleCheck, IconExclamationCircle } from '@tabler/icons-react'
 
 // IMPORTANT: when updating this schema, update the schema on the server as well
 // packages/server/src/iam/Interface.Iam.ts
-const RegisterIamUserSchema = z
-    .object({
-        username: z.string().min(1, 'Name is required'),
-        email: z.string().min(1, 'Email is required').email('Invalid email address'),
-        password: passwordSchema,
-        confirmPassword: z.string().min(1, 'Confirm Password is required'),
-        token: z.string().min(1, 'Invite Code is required')
-    })
-    .refine((data) => data.password === data.confirmPassword, {
-        message: "Passwords don't match",
-        path: ['confirmPassword']
-    })
+const RegisterIamUserSchema = z.object({
+    username: z.string().min(1, 'Name is required'),
+    email: z.string().min(1, 'Email is required').email('Invalid email address')
+})
 
-const RegisterCloudUserSchema = z
-    .object({
-        username: z.string().min(1, 'Name is required'),
-        email: z.string().min(1, 'Email is required').email('Invalid email address'),
-        password: passwordSchema,
-        confirmPassword: z.string().min(1, 'Confirm Password is required')
-    })
-    .refine((data) => data.password === data.confirmPassword, {
-        message: "Passwords don't match",
-        path: ['confirmPassword']
-    })
+const RegisterCloudUserSchema = z.object({
+    username: z.string().min(1, 'Name is required'),
+    email: z.string().min(1, 'Email is required').email('Invalid email address')
+})
 
 const RegisterPage = () => {
     const theme = useTheme()
     useNotifier()
-    const { isIamLicensed, isCloud, isOpenSource } = useConfig()
+    const { isIam, isCloud, isOpenSource } = useConfig()
 
     const usernameInput = {
         label: 'Username',
         name: 'username',
         type: 'text',
         placeholder: 'John Doe'
-    }
-
-    const passwordInput = {
-        label: 'Password',
-        name: 'password',
-        type: 'password',
-        placeholder: '********'
-    }
-
-    const confirmPasswordInput = {
-        label: 'Confirm Password',
-        name: 'confirmPassword',
-        type: 'password',
-        placeholder: '********'
     }
 
     const emailInput = {
@@ -95,18 +65,7 @@ const RegisterPage = () => {
         placeholder: 'user@company.com'
     }
 
-    const inviteCodeInput = {
-        label: 'Invite Code',
-        name: 'inviteCode',
-        type: 'text'
-    }
-
-    const [params] = useSearchParams()
-
     const [email, setEmail] = useState('')
-    const [password, setPassword] = useState('')
-    const [confirmPassword, setConfirmPassword] = useState('')
-    const [token, setToken] = useState(params.get('token') ?? '')
     const [username, setUsername] = useState('')
     const [configuredSsoProviders, setConfiguredSsoProviders] = useState([])
 
@@ -124,22 +83,17 @@ const RegisterPage = () => {
     const register = async (event) => {
         event.preventDefault()
         setAuthRateLimitError(null)
-        if (isIamLicensed) {
+        if (isIam) {
             const result = RegisterIamUserSchema.safeParse({
                 username,
-                email,
-                token,
-                password,
-                confirmPassword
+                email
             })
             if (result.success) {
                 setLoading(true)
                 const body = {
                     user: {
                         name: username,
-                        email,
-                        credential: password,
-                        tempToken: token
+                        email
                     }
                 }
                 await registerApi.request(body)
@@ -152,17 +106,14 @@ const RegisterPage = () => {
             const referral = formData.get('referral')
             const result = RegisterCloudUserSchema.safeParse({
                 username,
-                email,
-                password,
-                confirmPassword
+                email
             })
             if (result.success) {
                 setLoading(true)
                 const body = {
                     user: {
                         name: username,
-                        email,
-                        credential: password
+                        email
                     }
                 }
                 if (referral) {
@@ -183,12 +134,10 @@ const RegisterPage = () => {
 
     useEffect(() => {
         if (registerApi.error) {
-            if (isIamLicensed) {
-                setAuthError(
-                    `Error in registering user. Please contact your administrator. (${registerApi.error?.response?.data?.message})`
-                )
+            if (isIam) {
+                setAuthError(`Error sending invite. Please contact your administrator. (${registerApi.error?.response?.data?.message})`)
             } else if (isCloud) {
-                setAuthError(`Error in registering user. Please try again.`)
+                setAuthError('Error sending invite. Please try again.')
             }
             setLoading(false)
         }
@@ -235,15 +184,12 @@ const RegisterPage = () => {
         if (registerApi.data) {
             setLoading(false)
             setAuthError(undefined)
-            setConfirmPassword('')
-            setPassword('')
-            setToken('')
             setUsername('')
             setEmail('')
-            if (isIamLicensed) {
-                setSuccessMsg('Registration Successful. You will be redirected to the sign in page shortly.')
+            if (isIam) {
+                setSuccessMsg('Invite sent. Please check your email to continue registration.')
             } else if (isCloud) {
-                setSuccessMsg('To complete your registration, please use the invite link we sent to your email address')
+                setSuccessMsg('Invite sent. Please check your email to continue registration.')
             }
             setTimeout(() => {
                 navigate('/signin')
@@ -290,7 +236,7 @@ const RegisterPage = () => {
                         </Alert>
                     )}
                     <Stack sx={{ gap: 1 }}>
-                        <Typography variant='h1'>Sign Up</Typography>
+                        <Typography variant='h1'>Request an Invite</Typography>
                         <Typography variant='body2' sx={{ color: theme.palette.grey[600] }}>
                             Already have an account?{' '}
                             <Link style={{ color: theme.palette.primary.main }} to='/signin'>
@@ -333,64 +279,11 @@ const RegisterPage = () => {
                                     showDialog={false}
                                 />
                                 <Typography variant='caption'>
-                                    <i>Kindly use a valid email address. Will be used as login id.</i>
-                                </Typography>
-                            </Box>
-                            {isIamLicensed && (
-                                <Box>
-                                    <div style={{ display: 'flex', flexDirection: 'row' }}>
-                                        <Typography>
-                                            Invite Code<span style={{ color: 'red' }}>&nbsp;*</span>
-                                        </Typography>
-                                        <div style={{ flexGrow: 1 }}></div>
-                                    </div>
-                                    <OutlinedInput
-                                        fullWidth
-                                        type='string'
-                                        placeholder='Paste in the invite code.'
-                                        multiline={false}
-                                        inputParam={inviteCodeInput}
-                                        onChange={(e) => setToken(e.target.value)}
-                                        value={token}
-                                    />
-                                    <Typography variant='caption'>
-                                        <i>Please copy the token you would have received in your email.</i>
-                                    </Typography>
-                                </Box>
-                            )}
-                            <Box>
-                                <div style={{ display: 'flex', flexDirection: 'row' }}>
-                                    <Typography>
-                                        Password<span style={{ color: 'red' }}>&nbsp;*</span>
-                                    </Typography>
-                                    <div style={{ flexGrow: 1 }}></div>
-                                </div>
-                                <Input inputParam={passwordInput} onChange={(newValue) => setPassword(newValue)} value={password} />
-                                <Typography variant='caption'>
-                                    <i>
-                                        Password must be at least 8 characters long and contain at least one lowercase letter, one uppercase
-                                        letter, one digit, and one special character.
-                                    </i>
-                                </Typography>
-                            </Box>
-                            <Box>
-                                <div style={{ display: 'flex', flexDirection: 'row' }}>
-                                    <Typography>
-                                        Confirm Password<span style={{ color: 'red' }}>&nbsp;*</span>
-                                    </Typography>
-                                    <div style={{ flexGrow: 1 }}></div>
-                                </div>
-                                <Input
-                                    inputParam={confirmPasswordInput}
-                                    onChange={(newValue) => setConfirmPassword(newValue)}
-                                    value={confirmPassword}
-                                />
-                                <Typography variant='caption'>
-                                    <i>Confirm your password. Must match the password typed above.</i>
+                                    <i>We will send an invite link to this email to finish setup.</i>
                                 </Typography>
                             </Box>
                             <StyledButton variant='contained' style={{ borderRadius: 12, height: 40, marginRight: 5 }} type='submit'>
-                                Create Account
+                                Send Invite
                             </StyledButton>
                             {configuredSsoProviders.length > 0 && <Divider sx={{ width: '100%' }}>OR</Divider>}
                             {configuredSsoProviders &&

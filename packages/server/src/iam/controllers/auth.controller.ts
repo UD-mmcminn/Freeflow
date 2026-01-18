@@ -41,7 +41,7 @@ export class AuthController implements IAuthController {
                 throw new InternalFlowiseError(StatusCodes.BAD_REQUEST, 'Session token is required')
             }
             await this.authService.logout(sessionToken)
-            return res.status(StatusCodes.OK).json({ message: 'Logged out' })
+            return res.status(StatusCodes.OK).json({ message: 'logged_out', redirectTo: '/login' })
         } catch (error) {
             return this.handleError(res, error)
         }

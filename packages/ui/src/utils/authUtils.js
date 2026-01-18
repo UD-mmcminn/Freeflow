@@ -54,6 +54,27 @@ const extractUser = (payload) => {
     return user
 }
 
+const buildSessionAuthPayload = (session, email) => ({
+    id: session.userId,
+    email,
+    name: email,
+    status: 'ACTIVE',
+    role: null,
+    isSSO: false,
+    activeOrganizationId: null,
+    activeOrganizationSubscriptionId: null,
+    activeOrganizationCustomerId: null,
+    activeOrganizationProductId: null,
+    activeWorkspaceId: null,
+    activeWorkspace: null,
+    lastLogin: null,
+    isOrganizationAdmin: false,
+    assignedWorkspaces: [],
+    permissions: [],
+    features: [],
+    token: session.sessionToken
+})
+
 const updateStateAndLocalStorage = (state, payload) => {
     const user = extractUser(payload)
     state.user = user
@@ -75,7 +96,8 @@ const AuthUtils = {
     updateCurrentUser,
     removeCurrentUser,
     updateStateAndLocalStorage,
-    extractUser
+    extractUser,
+    buildSessionAuthPayload
 }
 
 export default AuthUtils
