@@ -110,6 +110,20 @@ export class RefactorIamDatabase1737076223692 implements MigrationInterface {
         `)
 
         await queryRunner.query(`
+            CREATE TABLE IF NOT EXISTS "user_credential" (
+                "id" TEXT NOT NULL,
+                "userId" TEXT NOT NULL,
+                "provider" TEXT NOT NULL,
+                "passwordHash" TEXT NULL,
+                "tempToken" TEXT NULL,
+                "tokenExpiry" INTEGER NULL,
+                "createdDate" TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
+                "updatedDate" TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
+                PRIMARY KEY ("id")
+            );
+        `)
+
+        await queryRunner.query(`
             CREATE TABLE IF NOT EXISTS "login_activity" (
                 "id" TEXT NOT NULL,
                 "userId" TEXT NOT NULL,
@@ -141,6 +155,7 @@ export class RefactorIamDatabase1737076223692 implements MigrationInterface {
         await queryRunner.query('DROP TABLE IF EXISTS "workspace_shared";')
         await queryRunner.query('DROP TABLE IF EXISTS "login_activity";')
         await queryRunner.query('DROP TABLE IF EXISTS "login_session";')
+        await queryRunner.query('DROP TABLE IF EXISTS "user_credential";')
         await queryRunner.query('DROP TABLE IF EXISTS "login_method";')
         await queryRunner.query('DROP TABLE IF EXISTS "workspace_user";')
         await queryRunner.query('DROP TABLE IF EXISTS "organization_user";')
