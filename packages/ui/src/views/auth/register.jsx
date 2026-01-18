@@ -243,7 +243,7 @@ const RegisterPage = () => {
             if (isIamLicensed) {
                 setSuccessMsg('Registration Successful. You will be redirected to the sign in page shortly.')
             } else if (isCloud) {
-                setSuccessMsg('To complete your registration, please click on the verification link we sent to your email address')
+                setSuccessMsg('To complete your registration, please use the invite link we sent to your email address')
             }
             setTimeout(() => {
                 navigate('/signin')
