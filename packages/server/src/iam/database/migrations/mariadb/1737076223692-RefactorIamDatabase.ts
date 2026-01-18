@@ -11,8 +11,7 @@ export class RefactorIamDatabase1737076223692 implements MigrationInterface {
                 \`credential\` TEXT NULL,
                 \`tempToken\` TEXT NULL,
                 \`tokenExpiry\` BIGINT NULL,
-                \`isActive\` BOOLEAN NOT NULL DEFAULT TRUE,
-                \`emailVerified\` BOOLEAN NOT NULL DEFAULT FALSE,
+                \`status\` VARCHAR(32) NOT NULL DEFAULT 'PENDING',
                 \`createdDate\` TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
                 \`updatedDate\` TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
                 PRIMARY KEY (\`id\`),
@@ -65,6 +64,7 @@ export class RefactorIamDatabase1737076223692 implements MigrationInterface {
                 \`userId\` TEXT NOT NULL,
                 \`roleId\` TEXT NULL,
                 \`isOwner\` BOOLEAN NOT NULL DEFAULT FALSE,
+                \`status\` VARCHAR(32) NOT NULL DEFAULT 'ACTIVE',
                 \`createdDate\` TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
                 \`updatedDate\` TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
                 PRIMARY KEY (\`id\`)
@@ -77,6 +77,7 @@ export class RefactorIamDatabase1737076223692 implements MigrationInterface {
                 \`workspaceId\` TEXT NOT NULL,
                 \`userId\` TEXT NOT NULL,
                 \`roleId\` TEXT NULL,
+                \`status\` VARCHAR(32) NOT NULL DEFAULT 'ACTIVE',
                 \`createdDate\` TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
                 \`updatedDate\` TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
                 PRIMARY KEY (\`id\`)

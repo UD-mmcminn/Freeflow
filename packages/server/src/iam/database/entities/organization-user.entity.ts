@@ -23,6 +23,9 @@ export class OrganizationUser implements IOrganizationUser {
     @Column({ type: 'boolean', default: false })
     isOwner: boolean
 
+    @Column({ type: 'varchar', length: 32, default: 'ACTIVE' })
+    status: 'PENDING' | 'ACTIVE' | 'DISABLED'
+
     @CreateDateColumn({ type: 'timestamp' })
     createdDate: Date
 

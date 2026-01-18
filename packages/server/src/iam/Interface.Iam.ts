@@ -2,6 +2,7 @@ export type FeatureFlags = Record<string, string>
 
 export type LoginMethodStatusLike = 'ENABLE' | 'DISABLE'
 export type RoleScope = 'system' | 'organization' | 'workspace'
+export type AccountStatus = 'PENDING' | 'ACTIVE' | 'DISABLED'
 
 export enum ErrorMessage {
     FORBIDDEN = 'Forbidden'
@@ -47,8 +48,7 @@ export interface IUser {
     credential?: string | Promise<string>
     tempToken?: string
     tokenExpiry?: number
-    isActive: boolean
-    emailVerified: boolean
+    status: AccountStatus
     createdDate: Date
     updatedDate: Date
     organizationUsers?: IOrganizationUser[]
@@ -90,6 +90,7 @@ export interface IOrganizationUser {
     userId: string
     roleId?: string
     isOwner: boolean
+    status: AccountStatus
     createdDate: Date
     updatedDate: Date
     organization?: IOrganization
@@ -102,6 +103,7 @@ export interface IWorkspaceUser {
     workspaceId: string
     userId: string
     roleId?: string
+    status: AccountStatus
     createdDate: Date
     updatedDate: Date
     workspace?: IWorkspace

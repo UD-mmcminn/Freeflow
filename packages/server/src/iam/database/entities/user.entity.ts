@@ -31,11 +31,8 @@ export class User implements IUser {
     @Column({ nullable: true, type: 'bigint' })
     tokenExpiry?: number
 
-    @Column({ type: 'boolean', default: true })
-    isActive: boolean
-
-    @Column({ type: 'boolean', default: false })
-    emailVerified: boolean
+    @Column({ type: 'varchar', length: 32, default: 'PENDING' })
+    status: 'PENDING' | 'ACTIVE' | 'DISABLED'
 
     @CreateDateColumn({ type: 'timestamp' })
     createdDate: Date

@@ -1,47 +1,129 @@
 import { Request, Response } from 'express'
+import { StatusCodes } from 'http-status-codes'
+import { InternalFlowiseError } from '../../errors/internalFlowiseError'
+import AccountService from '../services/account.service'
+import {
+    AcceptInviteRequestBody,
+    CreateInviteRequestBody,
+    GetProfileRequestBody,
+    RegisterRequestBody,
+    ResendInviteRequestBody,
+    UpdateProfileRequestBody
+} from '../types/account.requests'
 
 export interface IAccountController {
+    createInvite(req: Request, res: Response): Promise<Response>
     registerUser(req: Request, res: Response): Promise<Response>
     acceptInvite(req: Request, res: Response): Promise<Response>
     resendInvite(req: Request, res: Response): Promise<Response>
-    sendVerificationEmail(req: Request, res: Response): Promise<Response>
-    verifyEmail(req: Request, res: Response): Promise<Response>
-    resendVerificationEmail(req: Request, res: Response): Promise<Response>
     getAccount(req: Request, res: Response): Promise<Response>
     updateAccount(req: Request, res: Response): Promise<Response>
 }
 
 export class AccountController implements IAccountController {
-    async registerUser(_req: Request, res: Response): Promise<Response> {
-        return res.status(501).json({ message: 'Not implemented' })
+    private accountService: AccountService
+
+    constructor(accountService: AccountService = new AccountService()) {
+        this.accountService = accountService
     }
 
-    async acceptInvite(_req: Request, res: Response): Promise<Response> {
-        return res.status(501).json({ message: 'Not implemented' })
+    async createInvite(req: Request, res: Response): Promise<Response> {
+        try {
+            const body = req.body as CreateInviteRequestBody
+            const result = await this.accountService.createInvite({
+                user: { email: body.user.email },
+                organization: body.organization ? { id: body.organization.id } : undefined,
+                workspaces: body.workspace ? [{ id: body.workspace.id }] : undefined,
+                workspaceUsers: body.workspace && body.role ? [{ workspaceId: body.workspace.id, roleId: body.role.id }] : undefined,
+                organizationUsers: body.organization && body.role ? [{ organizationId: body.organization.id, roleId: body.role.id }] : undefined,
+                invites: [
+                    {
+                        email: body.user.email,
+                        organizationId: body.organization?.id,
+                        workspaceId: body.workspace?.id,
+                        roleId: body.role?.id,
+                        expiresAt: body.expiresAt
+                    }
+                ]
+            })
+            return res.status(StatusCodes.CREATED).json(result)
+        } catch (error) {
+            return this.handleError(res, error)
+        }
     }
 
-    async resendInvite(_req: Request, res: Response): Promise<Response> {
-        return res.status(501).json({ message: 'Not implemented' })
+    async registerUser(req: Request, res: Response): Promise<Response> {
+        try {
+            const body = req.body as RegisterRequestBody
+            const result = await this.accountService.registerUser({
+                user: body.user,
+                organization: body.organization,
+                workspaces: body.workspace ? [body.workspace] : undefined
+            })
+            return res.status(StatusCodes.CREATED).json(result)
+        } catch (error) {
+            return this.handleError(res, error)
+        }
     }
 
-    async sendVerificationEmail(_req: Request, res: Response): Promise<Response> {
-        return res.status(501).json({ message: 'Not implemented' })
+    async acceptInvite(req: Request, res: Response): Promise<Response> {
+        try {
+            const body = req.body as AcceptInviteRequestBody
+            const token = body?.token
+            if (!token) {
+                throw new InternalFlowiseError(StatusCodes.BAD_REQUEST, 'Invite token is required')
+            }
+            const result = await this.accountService.acceptInvite(token, {})
+            return res.status(StatusCodes.OK).json(result)
+        } catch (error) {
+            return this.handleError(res, error)
+        }
     }
 
-    async verifyEmail(_req: Request, res: Response): Promise<Response> {
-        return res.status(501).json({ message: 'Not implemented' })
+    async resendInvite(req: Request, res: Response): Promise<Response> {
+        try {
+            const body = req.body as ResendInviteRequestBody
+            await this.accountService.resendInvite({
+                user: { email: body.user.email },
+                organization: body.organization ? { id: body.organization.id } : undefined
+            })
+            return res.status(StatusCodes.OK).json({ message: 'Invite resent' })
+        } catch (error) {
+            return this.handleError(res, error)
+        }
     }
 
-    async resendVerificationEmail(_req: Request, res: Response): Promise<Response> {
-        return res.status(501).json({ message: 'Not implemented' })
+    async getAccount(req: Request, res: Response): Promise<Response> {
+        try {
+            const body = req.body as GetProfileRequestBody
+            const result = await this.accountService.getProfile({ user: body.user })
+            if (!result) {
+                return res.status(StatusCodes.NOT_FOUND).json({ message: 'Account not found' })
+            }
+            return res.status(StatusCodes.OK).json(result)
+        } catch (error) {
+            return this.handleError(res, error)
+        }
     }
 
-    async getAccount(_req: Request, res: Response): Promise<Response> {
-        return res.status(501).json({ message: 'Not implemented' })
+    async updateAccount(req: Request, res: Response): Promise<Response> {
+        try {
+            const body = req.body as UpdateProfileRequestBody
+            const result = await this.accountService.updateProfile({ user: body.user })
+            if (!result) {
+                return res.status(StatusCodes.NOT_FOUND).json({ message: 'Account not found' })
+            }
+            return res.status(StatusCodes.OK).json(result)
+        } catch (error) {
+            return this.handleError(res, error)
+        }
     }
 
-    async updateAccount(_req: Request, res: Response): Promise<Response> {
-        return res.status(501).json({ message: 'Not implemented' })
+    private handleError(res: Response, error: unknown): Response {
+        if (error instanceof InternalFlowiseError) {
+            return res.status(error.statusCode).json({ message: error.message })
+        }
+        return res.status(StatusCodes.INTERNAL_SERVER_ERROR).json({ message: 'Internal server error' })
     }
 }
 

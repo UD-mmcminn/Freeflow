@@ -165,8 +165,14 @@ const SignInPage = () => {
     }
 
     const handleResendInvite = async () => {
+        const queryParams = new URLSearchParams(location.search)
+        const organizationId = queryParams.get('organizationId') ?? queryParams.get('orgId')
         try {
-            await resendInviteApi.request({ email: usernameVal })
+            const payload = {
+                user: { email: usernameVal },
+                organization: organizationId ? { id: organizationId } : undefined
+            }
+            await resendInviteApi.request(payload)
             setAuthError(undefined)
             setSuccessMessage('Invite email has been sent successfully.')
             setShowResendButton(false)

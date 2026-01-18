@@ -11,8 +11,7 @@ export class RefactorIamDatabase1737076223692 implements MigrationInterface {
                 "credential" TEXT NULL,
                 "tempToken" TEXT NULL,
                 "tokenExpiry" INTEGER NULL,
-                "isActive" INTEGER NOT NULL DEFAULT 1,
-                "emailVerified" INTEGER NOT NULL DEFAULT 0,
+                "status" TEXT NOT NULL DEFAULT 'PENDING',
                 "createdDate" TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
                 "updatedDate" TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
                 PRIMARY KEY ("id")
@@ -65,6 +64,7 @@ export class RefactorIamDatabase1737076223692 implements MigrationInterface {
                 "userId" TEXT NOT NULL,
                 "roleId" TEXT NULL,
                 "isOwner" INTEGER NOT NULL DEFAULT 0,
+                "status" TEXT NOT NULL DEFAULT 'ACTIVE',
                 "createdDate" TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
                 "updatedDate" TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
                 PRIMARY KEY ("id")
@@ -77,6 +77,7 @@ export class RefactorIamDatabase1737076223692 implements MigrationInterface {
                 "workspaceId" TEXT NOT NULL,
                 "userId" TEXT NOT NULL,
                 "roleId" TEXT NULL,
+                "status" TEXT NOT NULL DEFAULT 'ACTIVE',
                 "createdDate" TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
                 "updatedDate" TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
                 PRIMARY KEY ("id")

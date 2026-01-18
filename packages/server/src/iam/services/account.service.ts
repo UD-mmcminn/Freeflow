@@ -6,9 +6,12 @@ import { AccountDescriptorInput, IAccountDescriptor, IInvite } from '../Interfac
 import { Invite } from '../database/entities/invite.entity'
 import { OrganizationUser } from '../database/entities/organization-user.entity'
 import { Organization } from '../database/entities/organization.entity'
+import { Role } from '../database/entities/role.entity'
 import { User } from '../database/entities/user.entity'
 import { WorkspaceUser } from '../database/entities/workspace-user.entity'
 import { Workspace } from '../database/entities/workspace.entity'
+import { INotificationService, NotificationService } from './notification.service'
+import { In, IsNull } from 'typeorm'
 
 export interface IAccountService {
     createUser(payload: AccountDescriptorInput): Promise<IAccountDescriptor>
@@ -16,17 +19,20 @@ export interface IAccountService {
     createInvite(payload: AccountDescriptorInput): Promise<IAccountDescriptor>
     revokeInvite(inviteId: string): Promise<void>
     acceptInvite(token: string, payload: AccountDescriptorInput): Promise<IAccountDescriptor>
-    resendInvite(email: string): Promise<void>
-    sendVerificationEmail(email: string): Promise<void>
-    verifyEmail(token: string): Promise<void>
-    resendVerificationEmail(email: string): Promise<void>
-    getProfile(userId: string): Promise<IAccountDescriptor | null>
-    updateProfile(userId: string, payload: AccountDescriptorInput): Promise<IAccountDescriptor | null>
+    resendInvite(payload: AccountDescriptorInput): Promise<void>
+    getProfile(payload: AccountDescriptorInput): Promise<IAccountDescriptor | null>
+    updateProfile(payload: AccountDescriptorInput): Promise<IAccountDescriptor | null>
     deactivateAccount(userId: string): Promise<void>
     deleteAccount(userId: string): Promise<void>
 }
 
 export class AccountService implements IAccountService {
+    private notificationService: INotificationService
+
+    constructor(notificationService: INotificationService = new NotificationService()) {
+        this.notificationService = notificationService
+    }
+
     async createUser(payload: AccountDescriptorInput): Promise<IAccountDescriptor> {
         const appServer = getRunningExpressApp()
 
@@ -45,10 +51,16 @@ export class AccountService implements IAccountService {
         const organizationName = payload.organization?.name ?? email
         const workspaceName = payload.workspaces?.[0]?.name ?? 'Default Workspace'
 
-        return appServer.AppDataSource.transaction(async (manager) => {
+        const result = await appServer.AppDataSource.transaction(async (manager) => {
             const organizationRepository = manager.getRepository(Organization)
             const workspaceRepository = manager.getRepository(Workspace)
             const inviteRepository = manager.getRepository(Invite)
+            const userRepository = manager.getRepository(User)
+
+            const existingUser = await userRepository.findOneBy({ email })
+            if (existingUser) {
+                throw new InternalFlowiseError(StatusCodes.CONFLICT, 'User already exists')
+            }
 
             const organization = await organizationRepository.save(
                 organizationRepository.create({
@@ -64,6 +76,15 @@ export class AccountService implements IAccountService {
                     name: workspaceName,
                     organizationId: organization.id,
                     isPersonal: payload.workspaces?.[0]?.isPersonal ?? false
+                })
+            )
+
+            await userRepository.save(
+                userRepository.create({
+                    email,
+                    firstName: payload.user?.firstName,
+                    lastName: payload.user?.lastName,
+                    status: 'PENDING'
                 })
             )
 
@@ -84,6 +105,12 @@ export class AccountService implements IAccountService {
                 invites: [invite]
             }
         })
+
+        if (result.invites?.[0]) {
+            await this.notificationService.sendInvite(result.invites[0])
+        }
+
+        return result
     }
 
     async createInvite(payload: AccountDescriptorInput): Promise<IAccountDescriptor> {
@@ -92,8 +119,22 @@ export class AccountService implements IAccountService {
             throw new InternalFlowiseError(StatusCodes.BAD_REQUEST, 'Email is required to invite')
         }
         const appServer = getRunningExpressApp()
-        return appServer.AppDataSource.transaction(async (manager) => {
+        const result = await appServer.AppDataSource.transaction(async (manager) => {
             const inviteRepository = manager.getRepository(Invite)
+            const userRepository = manager.getRepository(User)
+
+            const existingUser = await userRepository.findOneBy({ email })
+            if (!existingUser) {
+                await userRepository.save(
+                    userRepository.create({
+                        email,
+                        firstName: payload.user?.firstName,
+                        lastName: payload.user?.lastName,
+                        status: 'PENDING'
+                    })
+                )
+            }
+
             const invite = await inviteRepository.save(
                 inviteRepository.create(
                     this.buildInvite({
@@ -110,6 +151,12 @@ export class AccountService implements IAccountService {
                 invites: [invite]
             }
         })
+
+        if (result.invites?.[0]) {
+            await this.notificationService.sendInvite(result.invites[0])
+        }
+
+        return result
     }
 
     async revokeInvite(inviteId: string): Promise<void> {
@@ -125,77 +172,185 @@ export class AccountService implements IAccountService {
         })
     }
 
-    async acceptInvite(token: string, payload: AccountDescriptorInput): Promise<IAccountDescriptor> {
+    async acceptInvite(token: string, _payload: AccountDescriptorInput): Promise<IAccountDescriptor> {
         const appServer = getRunningExpressApp()
         return appServer.AppDataSource.transaction(async (manager) => {
             const inviteRepository = manager.getRepository(Invite)
-            const invite = await inviteRepository.findOneBy({ token })
+            const invite = await inviteRepository.findOneBy({ token, acceptedAt: IsNull() })
             if (!invite) {
                 throw new InternalFlowiseError(StatusCodes.NOT_FOUND, 'Invite not found')
             }
-            if (invite.acceptedAt) {
-                throw new InternalFlowiseError(StatusCodes.BAD_REQUEST, 'Invite already accepted')
+            if (invite.expiresAt && invite.expiresAt.getTime() < Date.now()) {
+                throw new InternalFlowiseError(StatusCodes.GONE, 'Invite expired')
             }
-            if (invite.expiresAt && invite.expiresAt < new Date()) {
-                throw new InternalFlowiseError(StatusCodes.BAD_REQUEST, 'Invite expired')
+
+            const userRepository = manager.getRepository(User)
+            const organizationUserRepository = manager.getRepository(OrganizationUser)
+            const workspaceUserRepository = manager.getRepository(WorkspaceUser)
+
+            let user = await userRepository.findOneBy({ email: invite.email })
+            if (!user) {
+                user = await userRepository.save(
+                    userRepository.create({
+                        email: invite.email,
+                        status: 'PENDING'
+                    })
+                )
+            }
+
+            let hasActiveOrgUser = false
+            if (invite.organizationId) {
+                const existingOrgUser = await organizationUserRepository.findOneBy({
+                    organizationId: invite.organizationId,
+                    userId: user.id
+                })
+                if (!existingOrgUser) {
+                    await organizationUserRepository.save(
+                        organizationUserRepository.create({
+                            organizationId: invite.organizationId,
+                            userId: user.id,
+                            roleId: invite.roleId,
+                            status: 'ACTIVE'
+                        })
+                    )
+                    hasActiveOrgUser = true
+                } else if (existingOrgUser.status === 'ACTIVE') {
+                    hasActiveOrgUser = true
+                }
+            }
+
+            if (invite.workspaceId) {
+                const existingWorkspaceUser = await workspaceUserRepository.findOneBy({
+                    workspaceId: invite.workspaceId,
+                    userId: user.id
+                })
+                if (!existingWorkspaceUser) {
+                    await workspaceUserRepository.save(
+                        workspaceUserRepository.create({
+                            workspaceId: invite.workspaceId,
+                            userId: user.id,
+                            roleId: invite.roleId,
+                            status: 'ACTIVE'
+                        })
+                    )
+                }
+            }
+
+            if (user.status !== 'DISABLED' && hasActiveOrgUser) {
+                user.status = 'ACTIVE'
+                user = await userRepository.save(user)
             }
 
             invite.acceptedAt = new Date()
             await inviteRepository.save(invite)
 
-            if (!payload.organizationUsers?.length && invite.organizationId) {
-                payload.organizationUsers = [
-                    {
-                        organizationId: invite.organizationId,
-                        roleId: invite.roleId,
-                        userId: ''
-                    }
-                ]
-            }
-            if (!payload.workspaceUsers?.length && invite.workspaceId) {
-                payload.workspaceUsers = [
-                    {
-                        workspaceId: invite.workspaceId,
-                        roleId: invite.roleId,
-                        userId: ''
-                    }
-                ]
-            }
-
-            return this.createUserWithManager(manager, payload)
+            return this.buildProfileWithManager(manager, user)
         })
     }
 
-    async resendInvite(_email: string): Promise<void> {
-        return
+    async resendInvite(payload: AccountDescriptorInput): Promise<void> {
+        const email = payload.user?.email ?? payload.invites?.[0]?.email
+        const organizationId =
+            payload.organization?.id ?? payload.organizationUsers?.[0]?.organizationId ?? payload.invites?.[0]?.organizationId
+
+        if (!email) {
+            throw new InternalFlowiseError(StatusCodes.BAD_REQUEST, 'Email is required to resend invite')
+        }
+
+        const appServer = getRunningExpressApp()
+        const invite = await appServer.AppDataSource.transaction(async (manager) => {
+            const inviteRepository = manager.getRepository(Invite)
+            const latestInvite = await inviteRepository.findOne({
+                where: organizationId ? { email, organizationId, acceptedAt: IsNull() } : { email, acceptedAt: IsNull() },
+                order: { createdDate: 'DESC' }
+            })
+
+            if (!latestInvite) {
+                throw new InternalFlowiseError(StatusCodes.NOT_FOUND, 'No pending invite found')
+            }
+
+            return inviteRepository.save(
+                inviteRepository.create(
+                    this.buildInvite({
+                        email,
+                        organizationId: latestInvite.organizationId,
+                        workspaceId: latestInvite.workspaceId,
+                        roleId: latestInvite.roleId
+                    })
+                )
+            )
+        })
+
+        await this.notificationService.sendInvite(invite)
     }
 
-    async sendVerificationEmail(_email: string): Promise<void> {
-        return
+    async getProfile(payload: AccountDescriptorInput): Promise<IAccountDescriptor | null> {
+        const userId = payload.user?.id
+        const email = payload.user?.email
+        if (!userId && !email) {
+            throw new InternalFlowiseError(StatusCodes.BAD_REQUEST, 'User id or email is required')
+        }
+
+        const appServer = getRunningExpressApp()
+        return appServer.AppDataSource.transaction(async (manager) => {
+            const userRepository = manager.getRepository(User)
+            const user = await userRepository.findOne({
+                where: userId ? { id: userId } : { email }
+            })
+            if (!user) return null
+
+            return this.buildProfileWithManager(manager, user)
+        })
     }
 
-    async verifyEmail(_token: string): Promise<void> {
-        return
-    }
+    async updateProfile(payload: AccountDescriptorInput): Promise<IAccountDescriptor | null> {
+        const userId = payload.user?.id
+        const email = payload.user?.email
+        if (!userId && !email) {
+            throw new InternalFlowiseError(StatusCodes.BAD_REQUEST, 'User id or email is required')
+        }
 
-    async resendVerificationEmail(_email: string): Promise<void> {
-        return
-    }
+        const appServer = getRunningExpressApp()
+        return appServer.AppDataSource.transaction(async (manager) => {
+            const userRepository = manager.getRepository(User)
+            const user = await userRepository.findOne({
+                where: userId ? { id: userId } : { email }
+            })
+            if (!user) return null
 
-    async getProfile(_userId: string): Promise<IAccountDescriptor | null> {
-        return null
-    }
+            const updates = payload.user ?? {}
+            const updatedUser = userRepository.merge(user, {
+                firstName: updates.firstName ?? user.firstName,
+                lastName: updates.lastName ?? user.lastName,
+                status: updates.status ?? user.status
+            })
+            await userRepository.save(updatedUser)
 
-    async updateProfile(_userId: string, _payload: AccountDescriptorInput): Promise<IAccountDescriptor | null> {
-        return null
+            return this.buildProfileWithManager(manager, updatedUser)
+        })
     }
 
     async deactivateAccount(_userId: string): Promise<void> {
-        return
+        const userId = _userId
+        if (!userId) {
+            throw new InternalFlowiseError(StatusCodes.BAD_REQUEST, 'User id is required')
+        }
+
+        const appServer = getRunningExpressApp()
+        await appServer.AppDataSource.transaction(async (manager) => {
+            const userRepository = manager.getRepository(User)
+            const user = await userRepository.findOneBy({ id: userId })
+            if (!user) {
+                throw new InternalFlowiseError(StatusCodes.NOT_FOUND, 'User not found')
+            }
+
+            user.status = 'DISABLED'
+            await userRepository.save(user)
+        })
     }
 
     async deleteAccount(_userId: string): Promise<void> {
-        return
+        throw new InternalFlowiseError(StatusCodes.NOT_IMPLEMENTED, 'Account deletion is not supported')
     }
 
     private async createUserWithManager(manager: any, payload: AccountDescriptorInput): Promise<IAccountDescriptor> {
@@ -209,8 +364,7 @@ export class AccountService implements IAccountService {
             email: userInput.email,
             firstName: userInput.firstName,
             lastName: userInput.lastName,
-            isActive: userInput.isActive ?? true,
-            emailVerified: userInput.emailVerified ?? false
+            status: userInput.status ?? 'ACTIVE'
         })
         const savedUser = await userRepository.save(newUser)
 
@@ -224,7 +378,8 @@ export class AccountService implements IAccountService {
                     organizationId: orgUser.organizationId,
                     userId: savedUser.id,
                     roleId: orgUser.roleId,
-                    isOwner: orgUser.isOwner ?? false
+                    isOwner: orgUser.isOwner ?? false,
+                    status: orgUser.status ?? 'ACTIVE'
                 })
                 createdOrganizationUsers.push(await orgUserRepository.save(created))
             }
@@ -239,7 +394,8 @@ export class AccountService implements IAccountService {
                 const created = workspaceUserRepository.create({
                     workspaceId: workspaceUser.workspaceId,
                     userId: savedUser.id,
-                    roleId: workspaceUser.roleId
+                    roleId: workspaceUser.roleId,
+                    status: workspaceUser.status ?? 'ACTIVE'
                 })
                 createdWorkspaceUsers.push(await workspaceUserRepository.save(created))
             }
@@ -263,6 +419,36 @@ export class AccountService implements IAccountService {
             token: input.token ?? randomUUID(),
             expiresAt,
             createdDate: new Date()
+        }
+    }
+
+    private async buildProfileWithManager(manager: any, user: User): Promise<IAccountDescriptor> {
+        const organizationUserRepository = manager.getRepository(OrganizationUser)
+        const workspaceUserRepository = manager.getRepository(WorkspaceUser)
+        const organizationRepository = manager.getRepository(Organization)
+        const workspaceRepository = manager.getRepository(Workspace)
+        const roleRepository = manager.getRepository(Role)
+
+        const organizationUsers = await organizationUserRepository.findBy({ userId: user.id })
+        const workspaceUsers = await workspaceUserRepository.findBy({ userId: user.id })
+
+        const organizationIds = organizationUsers.map((entry: OrganizationUser) => entry.organizationId).filter(Boolean) as string[]
+        const workspaceIds = workspaceUsers.map((entry: WorkspaceUser) => entry.workspaceId).filter(Boolean) as string[]
+        const roleIds = [...organizationUsers, ...workspaceUsers]
+            .map((entry: OrganizationUser | WorkspaceUser) => entry.roleId)
+            .filter(Boolean) as string[]
+
+        const organizations = organizationIds.length ? await organizationRepository.findBy({ id: In(organizationIds) }) : []
+        const workspaces = workspaceIds.length ? await workspaceRepository.findBy({ id: In(workspaceIds) }) : []
+        const roles = roleIds.length ? await roleRepository.findBy({ id: In(roleIds) }) : []
+
+        return {
+            user,
+            organizationUsers,
+            workspaceUsers,
+            organization: organizations[0],
+            workspaces,
+            roles
         }
     }
 }
