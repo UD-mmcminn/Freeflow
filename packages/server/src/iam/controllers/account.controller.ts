@@ -10,6 +10,7 @@ import {
     ResendInviteRequestBody,
     UpdateProfileRequestBody
 } from '../types/account.requests'
+import { AccountNotFoundResponse, AccountResponse, InviteResentResponse } from '../types/account.responses'
 
 export interface IAccountController {
     createInvite(req: Request, res: Response): Promise<Response>
@@ -27,7 +28,7 @@ export class AccountController implements IAccountController {
         this.accountService = accountService
     }
 
-    async createInvite(req: Request, res: Response): Promise<Response> {
+    async createInvite(req: Request, res: Response<AccountResponse>): Promise<Response<AccountResponse>> {
         try {
             const body = req.body as CreateInviteRequestBody
             const result = await this.accountService.createInvite({
@@ -46,13 +47,13 @@ export class AccountController implements IAccountController {
                     }
                 ]
             })
-            return res.status(StatusCodes.CREATED).json(result)
+            return res.status(StatusCodes.CREATED).json({ account: result })
         } catch (error) {
             return this.handleError(res, error)
         }
     }
 
-    async registerUser(req: Request, res: Response): Promise<Response> {
+    async registerUser(req: Request, res: Response<AccountResponse>): Promise<Response<AccountResponse>> {
         try {
             const body = req.body as RegisterRequestBody
             const result = await this.accountService.registerUser({
@@ -60,13 +61,13 @@ export class AccountController implements IAccountController {
                 organization: body.organization,
                 workspaces: body.workspace ? [body.workspace] : undefined
             })
-            return res.status(StatusCodes.CREATED).json(result)
+            return res.status(StatusCodes.CREATED).json({ account: result })
         } catch (error) {
             return this.handleError(res, error)
         }
     }
 
-    async acceptInvite(req: Request, res: Response): Promise<Response> {
+    async acceptInvite(req: Request, res: Response<AccountResponse>): Promise<Response<AccountResponse>> {
         try {
             const body = req.body as AcceptInviteRequestBody
             const token = body?.token
@@ -74,13 +75,13 @@ export class AccountController implements IAccountController {
                 throw new InternalFlowiseError(StatusCodes.BAD_REQUEST, 'Invite token is required')
             }
             const result = await this.accountService.acceptInvite(token, {})
-            return res.status(StatusCodes.OK).json(result)
+            return res.status(StatusCodes.OK).json({ account: result })
         } catch (error) {
             return this.handleError(res, error)
         }
     }
 
-    async resendInvite(req: Request, res: Response): Promise<Response> {
+    async resendInvite(req: Request, res: Response<InviteResentResponse>): Promise<Response<InviteResentResponse>> {
         try {
             const body = req.body as ResendInviteRequestBody
             await this.accountService.resendInvite({
@@ -93,27 +94,33 @@ export class AccountController implements IAccountController {
         }
     }
 
-    async getAccount(req: Request, res: Response): Promise<Response> {
+    async getAccount(
+        req: Request,
+        res: Response<AccountResponse | AccountNotFoundResponse>
+    ): Promise<Response<AccountResponse | AccountNotFoundResponse>> {
         try {
             const body = req.body as GetProfileRequestBody
             const result = await this.accountService.getProfile({ user: body.user })
             if (!result) {
                 return res.status(StatusCodes.NOT_FOUND).json({ message: 'Account not found' })
             }
-            return res.status(StatusCodes.OK).json(result)
+            return res.status(StatusCodes.OK).json({ account: result })
         } catch (error) {
             return this.handleError(res, error)
         }
     }
 
-    async updateAccount(req: Request, res: Response): Promise<Response> {
+    async updateAccount(
+        req: Request,
+        res: Response<AccountResponse | AccountNotFoundResponse>
+    ): Promise<Response<AccountResponse | AccountNotFoundResponse>> {
         try {
             const body = req.body as UpdateProfileRequestBody
             const result = await this.accountService.updateProfile({ user: body.user })
             if (!result) {
                 return res.status(StatusCodes.NOT_FOUND).json({ message: 'Account not found' })
             }
-            return res.status(StatusCodes.OK).json(result)
+            return res.status(StatusCodes.OK).json({ account: result })
         } catch (error) {
             return this.handleError(res, error)
         }
