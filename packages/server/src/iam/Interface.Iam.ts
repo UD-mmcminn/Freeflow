@@ -196,7 +196,21 @@ export interface IAccountDescriptor {
     invites?: IInvite[]
 }
 
-export type AccountDescriptorInput = Partial<IAccountDescriptor>
+export interface IAccountDescriptorInput {
+    user?: Partial<IUser>
+    organization?: Partial<IOrganization>
+    organizationUsers?: Array<Partial<IOrganizationUser>>
+    workspaces?: Array<Partial<IWorkspace>>
+    workspaceUsers?: Array<Partial<IWorkspaceUser>>
+    roles?: Array<Partial<IRole>>
+    loginMethods?: Array<Partial<ILoginMethod>>
+    loginSessions?: Array<Partial<ILoginSession>>
+    loginActivities?: Array<Partial<ILoginActivity>>
+    credentials?: Array<Partial<IUserCredential>>
+    invites?: Array<Partial<IInvite>>
+}
+
+export type AccountDescriptorInput = IAccountDescriptorInput
 
 export interface IInvite {
     id: string

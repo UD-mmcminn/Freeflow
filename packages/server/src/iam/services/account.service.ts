@@ -107,8 +107,6 @@ export class AccountService implements IAccountService {
             )
 
             return {
-                organization: payload.organization,
-                workspaces: payload.workspaces,
                 invites: [invite]
             }
         })
