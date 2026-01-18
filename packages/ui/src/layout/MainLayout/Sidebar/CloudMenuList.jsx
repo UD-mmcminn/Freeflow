@@ -19,7 +19,7 @@ import useApi from '@/hooks/useApi'
 
 // icons
 import { IconFileText, IconLogout, IconX } from '@tabler/icons-react'
-import accountApi from '@/api/account.api'
+import authApi from '@/api/auth'
 
 const CloudMenuList = () => {
     const customization = useSelector((state) => state.customization)
@@ -30,11 +30,17 @@ const CloudMenuList = () => {
     const enqueueSnackbar = (...args) => dispatch(enqueueSnackbarAction(...args))
     const closeSnackbar = (...args) => dispatch(closeSnackbarAction(...args))
 
-    const logoutApi = useApi(accountApi.logout)
+    const logoutApi = useApi(authApi.logout)
+    const sessionToken = useSelector((state) => state.auth.token)
     const { isCloud } = useConfig()
 
     const signOutClicked = () => {
-        logoutApi.request()
+        if (!sessionToken) {
+            store.dispatch(logoutSuccess())
+            window.location.href = '/login'
+            return
+        }
+        logoutApi.request({ sessionToken })
         enqueueSnackbar({
             message: 'Logging out...',
             options: {
@@ -51,9 +57,9 @@ const CloudMenuList = () => {
 
     useEffect(() => {
         try {
-            if (logoutApi.data && logoutApi.data.message === 'logged_out') {
+            if (logoutApi.data && (logoutApi.data.message === 'logged_out' || logoutApi.data.message === 'Logged out')) {
                 store.dispatch(logoutSuccess())
-                window.location.href = logoutApi.data.redirectTo
+                window.location.href = logoutApi.data.redirectTo ?? '/login'
             }
         } catch (e) {
             console.error(e)

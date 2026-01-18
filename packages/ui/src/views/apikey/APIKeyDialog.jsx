@@ -45,7 +45,7 @@ const APIKeyDialog = ({ show, dialogProps, onCancel, onConfirm, setError }) => {
 
     const theme = useTheme()
     const dispatch = useDispatch()
-    const { isOpenSource, isIamLicensed, isCloud } = useConfig()
+    const { isOpenSource, isIam, isCloud } = useConfig()
 
     // ==============================|| Snackbar ||============================== //
 
@@ -96,7 +96,7 @@ const APIKeyDialog = ({ show, dialogProps, onCancel, onConfirm, setError }) => {
             Object.keys(permissionsData).forEach((category) => {
                 permissionsData[category] = permissionsData[category].filter((permission) => {
                     if (isOpenSource) return permission.isOpenSource
-                    if (isIamLicensed) return permission.isIam
+                    if (isIam) return permission.isIam
                     if (isCloud) return permission.isCloud
                     return false
                 })

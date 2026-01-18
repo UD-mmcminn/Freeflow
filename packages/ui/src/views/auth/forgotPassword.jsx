@@ -37,7 +37,7 @@ const ForgotPasswordPage = () => {
         placeholder: 'user@company.com'
     }
     const [usernameVal, setUsernameVal] = useState('')
-    const { isIamLicensed } = useConfig()
+    const { isIam } = useConfig()
 
     const [isLoading, setLoading] = useState(false)
     const [responseMsg, setResponseMsg] = useState(undefined)
@@ -134,7 +134,7 @@ const ForgotPasswordPage = () => {
                                     value={usernameVal}
                                     showDialog={false}
                                 />
-                                {isIamLicensed && (
+                                {isIam && (
                                     <Typography variant='caption'>
                                         <i>If you forgot the email you used for signing up, please contact your administrator.</i>
                                     </Typography>
