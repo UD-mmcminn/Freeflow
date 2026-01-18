@@ -55,6 +55,7 @@ export interface IUser {
     workspaceUsers?: IWorkspaceUser[]
     loginSessions?: ILoginSession[]
     loginActivities?: ILoginActivity[]
+    credentials?: IUserCredential[]
 }
 
 export interface IOrganization {
@@ -167,4 +168,16 @@ export interface IWorkspaceShared {
     createdDate: Date
     workspace?: IWorkspace
     createdBy?: IUser
+}
+
+export interface IUserCredential {
+    id: string
+    userId: string
+    provider: string
+    passwordHash?: string
+    tempToken?: string
+    tokenExpiry?: number
+    createdDate: Date
+    updatedDate: Date
+    user?: IUser
 }

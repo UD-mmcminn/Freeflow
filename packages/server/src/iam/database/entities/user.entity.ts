@@ -3,6 +3,7 @@ import { IUser } from '../../Interface.Iam'
 import { LoginActivity } from './login-activity.entity'
 import { LoginSession } from './login-session.entity'
 import { OrganizationUser } from './organization-user.entity'
+import { UserCredential } from './user-credential.entity'
 import { WorkspaceUser } from './workspace-user.entity'
 
 @Entity('user')
@@ -53,4 +54,7 @@ export class User implements IUser {
 
     @OneToMany(() => LoginActivity, (loginActivity) => loginActivity.user)
     loginActivities?: LoginActivity[]
+
+    @OneToMany(() => UserCredential, (credential) => credential.user)
+    credentials?: UserCredential[]
 }
