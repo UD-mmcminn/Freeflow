@@ -10,6 +10,7 @@ import { Role } from '../database/entities/role.entity'
 import { User } from '../database/entities/user.entity'
 import { WorkspaceUser } from '../database/entities/workspace-user.entity'
 import { Workspace } from '../database/entities/workspace.entity'
+import { ILoginSessionService, LoginSessionService } from './login-session.service'
 import { INotificationService, NotificationService } from './notification.service'
 import { ILocalAuthService, LocalAuthService } from './local-auth.service'
 import { In, IsNull } from 'typeorm'
@@ -31,13 +32,16 @@ export interface IAccountService {
 export class AccountService implements IAccountService {
     private notificationService: INotificationService
     private localAuthService: ILocalAuthService
+    private loginSessionService: ILoginSessionService
 
     constructor(
         notificationService: INotificationService = new NotificationService(),
-        localAuthService: ILocalAuthService = new LocalAuthService()
+        localAuthService: ILocalAuthService = new LocalAuthService(),
+        loginSessionService: ILoginSessionService = new LoginSessionService()
     ) {
         this.notificationService = notificationService
         this.localAuthService = localAuthService
+        this.loginSessionService = loginSessionService
     }
 
     async createUser(payload: AccountDescriptorInput): Promise<IAccountDescriptor> {
@@ -354,6 +358,9 @@ export class AccountService implements IAccountService {
                 status: updates.status ?? user.status
             })
             await userRepository.save(updatedUser)
+            if (updates.status && updates.status !== user.status && updates.status !== 'ACTIVE') {
+                await this.loginSessionService.revokeSessionsByUserId(updatedUser.id, manager)
+            }
 
             return this.buildProfileWithManager(manager, updatedUser)
         })
@@ -375,6 +382,7 @@ export class AccountService implements IAccountService {
 
             user.status = 'DISABLED'
             await userRepository.save(user)
+            await this.loginSessionService.revokeSessionsByUserId(user.id, manager)
         })
     }
 

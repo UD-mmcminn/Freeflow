@@ -2,9 +2,9 @@ import { randomUUID } from 'crypto'
 import { StatusCodes } from 'http-status-codes'
 import { InternalFlowiseError } from '../../errors/internalFlowiseError'
 import { getRunningExpressApp } from '../../utils/getRunningExpressApp'
-import { LoginSession } from '../database/entities/login-session.entity'
 import { User } from '../database/entities/user.entity'
 import { LoginResponse, RefreshTokenResponse } from '../types/auth.responses'
+import { ILoginSessionService, LoginSessionService } from './login-session.service'
 import { ILocalAuthService, LocalAuthService } from './local-auth.service'
 
 export interface IAuthService {
@@ -18,9 +18,14 @@ export interface IAuthService {
 
 export class AuthService implements IAuthService {
     private localAuthService: ILocalAuthService
+    private loginSessionService: ILoginSessionService
 
-    constructor(localAuthService: ILocalAuthService = new LocalAuthService()) {
+    constructor(
+        localAuthService: ILocalAuthService = new LocalAuthService(),
+        loginSessionService: ILoginSessionService = new LoginSessionService()
+    ) {
         this.localAuthService = localAuthService
+        this.loginSessionService = loginSessionService
     }
 
     async login(payload: { userId?: string; email?: string; password?: string }): Promise<LoginResponse> {
@@ -33,7 +38,6 @@ export class AuthService implements IAuthService {
         const appServer = getRunningExpressApp()
         return appServer.AppDataSource.transaction(async (manager) => {
             const userRepository = manager.getRepository(User)
-            const sessionRepository = manager.getRepository(LoginSession)
 
             const user = await userRepository.findOne({
                 where: payload.userId ? { id: payload.userId } : { email: payload.email }
@@ -52,13 +56,14 @@ export class AuthService implements IAuthService {
             }
 
             const expiresAt = new Date(Date.now() + 7 * 24 * 60 * 60 * 1000)
-            const session = await sessionRepository.save(
-                sessionRepository.create({
+            const session = await this.loginSessionService.createSession(
+                {
                     userId: user.id,
                     sessionToken: randomUUID(),
                     refreshToken: randomUUID(),
                     expiresAt
-                })
+                },
+                manager
             )
 
             return { session }
@@ -71,8 +76,7 @@ export class AuthService implements IAuthService {
         }
         const appServer = getRunningExpressApp()
         await appServer.AppDataSource.transaction(async (manager) => {
-            const sessionRepository = manager.getRepository(LoginSession)
-            await sessionRepository.delete({ sessionToken })
+            await this.loginSessionService.revokeSessionByToken(sessionToken, manager)
         })
     }
 
@@ -82,19 +86,35 @@ export class AuthService implements IAuthService {
         }
         const appServer = getRunningExpressApp()
         return appServer.AppDataSource.transaction(async (manager) => {
-            const sessionRepository = manager.getRepository(LoginSession)
-            const session = await sessionRepository.findOneBy({ refreshToken })
+            const session = await this.loginSessionService.getSessionByRefreshToken(refreshToken, manager)
             if (!session) {
                 throw new InternalFlowiseError(StatusCodes.NOT_FOUND, 'Session not found')
             }
             if (session.expiresAt && session.expiresAt.getTime() < Date.now()) {
+                await this.loginSessionService.revokeSession(session.id, manager)
                 throw new InternalFlowiseError(StatusCodes.UNAUTHORIZED, 'Session expired')
             }
 
-            session.sessionToken = randomUUID()
-            session.refreshToken = randomUUID()
-            session.expiresAt = new Date(Date.now() + 7 * 24 * 60 * 60 * 1000)
-            const updated = await sessionRepository.save(session)
+            const userRepository = manager.getRepository(User)
+            const user = await userRepository.findOneBy({ id: session.userId })
+            if (!user) {
+                await this.loginSessionService.revokeSession(session.id, manager)
+                throw new InternalFlowiseError(StatusCodes.NOT_FOUND, 'User not found')
+            }
+            if (user.status !== 'ACTIVE') {
+                await this.loginSessionService.revokeSession(session.id, manager)
+                throw new InternalFlowiseError(StatusCodes.FORBIDDEN, 'User is not active')
+            }
+
+            const updated = await this.loginSessionService.rotateSessionTokens(
+                session,
+                {
+                    sessionToken: randomUUID(),
+                    refreshToken: randomUUID(),
+                    expiresAt: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000)
+                },
+                manager
+            )
             return { session: updated }
         })
     }
