@@ -5,9 +5,10 @@ import { getRunningExpressApp } from '../../utils/getRunningExpressApp'
 import { LoginSession } from '../database/entities/login-session.entity'
 import { User } from '../database/entities/user.entity'
 import { LoginResponse, RefreshTokenResponse } from '../types/auth.responses'
+import { ILocalAuthService, LocalAuthService } from './local-auth.service'
 
 export interface IAuthService {
-    login(payload: { userId?: string; email?: string }): Promise<LoginResponse>
+    login(payload: { userId?: string; email?: string; password?: string }): Promise<LoginResponse>
     logout(sessionToken: string): Promise<void>
     refreshToken(refreshToken: string): Promise<RefreshTokenResponse>
     startSsoLogin(provider: string): Promise<any>
@@ -16,7 +17,19 @@ export interface IAuthService {
 }
 
 export class AuthService implements IAuthService {
-    async login(payload: { userId?: string; email?: string }): Promise<LoginResponse> {
+    private localAuthService: ILocalAuthService
+
+    constructor(localAuthService: ILocalAuthService = new LocalAuthService()) {
+        this.localAuthService = localAuthService
+    }
+
+    async login(payload: { userId?: string; email?: string; password?: string }): Promise<LoginResponse> {
+        if (!payload.userId && !payload.email) {
+            throw new InternalFlowiseError(StatusCodes.BAD_REQUEST, 'Email is required')
+        }
+        if (payload.email && !payload.password) {
+            throw new InternalFlowiseError(StatusCodes.BAD_REQUEST, 'Password is required')
+        }
         const appServer = getRunningExpressApp()
         return appServer.AppDataSource.transaction(async (manager) => {
             const userRepository = manager.getRepository(User)
@@ -30,6 +43,12 @@ export class AuthService implements IAuthService {
             }
             if (user.status !== 'ACTIVE') {
                 throw new InternalFlowiseError(StatusCodes.FORBIDDEN, 'User is not active')
+            }
+            if (payload.password) {
+                const isValid = await this.localAuthService.verifyPassword(user.id, payload.password)
+                if (!isValid) {
+                    throw new InternalFlowiseError(StatusCodes.UNAUTHORIZED, 'Invalid credentials')
+                }
             }
 
             const expiresAt = new Date(Date.now() + 7 * 24 * 60 * 60 * 1000)
