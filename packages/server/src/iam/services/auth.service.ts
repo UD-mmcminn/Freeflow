@@ -87,6 +87,9 @@ export class AuthService implements IAuthService {
             if (!session) {
                 throw new InternalFlowiseError(StatusCodes.NOT_FOUND, 'Session not found')
             }
+            if (session.expiresAt && session.expiresAt.getTime() < Date.now()) {
+                throw new InternalFlowiseError(StatusCodes.UNAUTHORIZED, 'Session expired')
+            }
 
             session.sessionToken = randomUUID()
             session.refreshToken = randomUUID()
