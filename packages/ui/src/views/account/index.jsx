@@ -287,36 +287,32 @@ const AccountSettings = () => {
             }
 
             const obj = {
-                id: currentUser.id,
-                oldPassword,
-                newPassword,
-                confirmPassword
+                userId: currentUser.id,
+                currentPassword: oldPassword,
+                newPassword
             }
-            const saveProfileResp = await userApi.updateUser(obj)
-            if (saveProfileResp.data) {
-                store.dispatch(userProfileUpdated(saveProfileResp.data))
-                setOldPassword('')
-                setNewPassword('')
-                setConfirmPassword('')
-                if (sessionToken) {
-                    await logoutApi.request({ sessionToken })
-                } else {
-                    store.dispatch(logoutSuccess())
-                    window.location.href = '/login'
+            await accountApi.changePassword(obj)
+            setOldPassword('')
+            setNewPassword('')
+            setConfirmPassword('')
+            if (sessionToken) {
+                await logoutApi.request({ sessionToken })
+            } else {
+                store.dispatch(logoutSuccess())
+                window.location.href = '/login'
+            }
+            enqueueSnackbar({
+                message: 'Password updated',
+                options: {
+                    key: new Date().getTime() + Math.random(),
+                    variant: 'success',
+                    action: (key) => (
+                        <Button style={{ color: 'white' }} onClick={() => closeSnackbar(key)}>
+                            <IconX />
+                        </Button>
+                    )
                 }
-                enqueueSnackbar({
-                    message: 'Password updated',
-                    options: {
-                        key: new Date().getTime() + Math.random(),
-                        variant: 'success',
-                        action: (key) => (
-                            <Button style={{ color: 'white' }} onClick={() => closeSnackbar(key)}>
-                                <IconX />
-                            </Button>
-                        )
-                    }
-                })
-            }
+            })
         } catch (error) {
             enqueueSnackbar({
                 message: `Failed to update password: ${

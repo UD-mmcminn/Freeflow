@@ -101,11 +101,8 @@ const ResetPasswordPage = () => {
             return
         }
         const body = {
-            user: {
-                email: emailVal,
-                tempToken: tokenVal,
-                password: newPasswordVal
-            }
+            token: tokenVal,
+            password: newPasswordVal
         }
         setLoading(true)
         try {
