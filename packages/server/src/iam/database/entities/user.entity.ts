@@ -34,10 +34,10 @@ export class User implements IUser {
     @Column({ type: 'varchar', length: 32, default: 'PENDING' })
     status: 'PENDING' | 'ACTIVE' | 'DISABLED'
 
-    @CreateDateColumn({ type: 'timestamp' })
+    @CreateDateColumn()
     createdDate: Date
 
-    @UpdateDateColumn({ type: 'timestamp' })
+    @UpdateDateColumn()
     updatedDate: Date
 
     @OneToMany(() => OrganizationUser, (organizationUser) => organizationUser.user)

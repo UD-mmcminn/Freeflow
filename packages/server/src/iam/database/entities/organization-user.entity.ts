@@ -26,10 +26,10 @@ export class OrganizationUser implements IOrganizationUser {
     @Column({ type: 'varchar', length: 32, default: 'ACTIVE' })
     status: 'PENDING' | 'ACTIVE' | 'DISABLED'
 
-    @CreateDateColumn({ type: 'timestamp' })
+    @CreateDateColumn()
     createdDate: Date
 
-    @UpdateDateColumn({ type: 'timestamp' })
+    @UpdateDateColumn()
     updatedDate: Date
 
     @ManyToOne(() => Organization, (organization) => organization.organizationUsers, { onDelete: 'CASCADE' })

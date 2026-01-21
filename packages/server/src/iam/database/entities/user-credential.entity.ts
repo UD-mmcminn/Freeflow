@@ -24,10 +24,10 @@ export class UserCredential implements IUserCredential {
     @Column({ nullable: true, type: 'bigint' })
     tokenExpiry?: number
 
-    @CreateDateColumn({ type: 'timestamp' })
+    @CreateDateColumn()
     createdDate: Date
 
-    @UpdateDateColumn({ type: 'timestamp' })
+    @UpdateDateColumn()
     updatedDate: Date
 
     @ManyToOne(() => User, (user) => user.credentials, { onDelete: 'CASCADE' })

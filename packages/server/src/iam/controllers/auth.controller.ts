@@ -20,7 +20,7 @@ export class AuthController implements IAuthController {
     }
 
     async resolveLogin(_req: Request, res: Response): Promise<Response> {
-        return res.status(StatusCodes.NOT_IMPLEMENTED).json({ message: 'Not implemented' })
+        return res.status(StatusCodes.OK).json({ redirectUrl: '/signin' })
     }
 
     async login(req: Request, res: Response): Promise<Response<LoginResponse>> {

@@ -1,1 +1,11 @@
-export class ExecutionLinkWorkspaceId1746862866554 {}
+import { MigrationInterface, QueryRunner } from 'typeorm'
+
+export class ExecutionLinkWorkspaceId1746862866554 implements MigrationInterface {
+    public async up(_queryRunner: QueryRunner): Promise<void> {
+        return
+    }
+
+    public async down(_queryRunner: QueryRunner): Promise<void> {
+        return
+    }
+}

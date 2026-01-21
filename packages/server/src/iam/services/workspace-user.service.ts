@@ -10,13 +10,32 @@ export interface IWorkspaceUserService {
     deleteWorkspaceUser(workspaceUserId: string): Promise<void>
 }
 
+import { getRunningExpressApp } from '../../utils/getRunningExpressApp'
+import { WorkspaceUser } from '../database/entities/workspace-user.entity'
+
 export class WorkspaceUserService implements IWorkspaceUserService {
-    async readWorkspaceUserByUserId(_userId: string, _queryRunner?: any): Promise<any[]> {
-        return []
+    async readWorkspaceUserByUserId(userId: string, queryRunner?: any): Promise<WorkspaceUser[]> {
+        if (!userId) return []
+        const appServer = getRunningExpressApp()
+        if (queryRunner) {
+            const repository = queryRunner.manager.getRepository(WorkspaceUser)
+            return repository.find({ where: { userId }, relations: ['workspace', 'user', 'role'] })
+        }
+        return appServer.AppDataSource.transaction(async (manager) => {
+            const repository = manager.getRepository(WorkspaceUser)
+            return repository.find({ where: { userId }, relations: ['workspace', 'user', 'role'] })
+        })
     }
 
-    async listWorkspaceUsers(_workspaceId?: string): Promise<any[]> {
-        return []
+    async listWorkspaceUsers(workspaceId?: string): Promise<WorkspaceUser[]> {
+        const appServer = getRunningExpressApp()
+        return appServer.AppDataSource.transaction(async (manager) => {
+            const repository = manager.getRepository(WorkspaceUser)
+            return repository.find({
+                where: workspaceId ? { workspaceId } : undefined,
+                relations: ['workspace', 'user', 'role']
+            })
+        })
     }
 
     async getWorkspaceUserById(_workspaceUserId: string): Promise<any | null> {

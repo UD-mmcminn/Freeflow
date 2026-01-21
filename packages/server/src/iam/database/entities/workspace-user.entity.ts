@@ -23,10 +23,10 @@ export class WorkspaceUser implements IWorkspaceUser {
     @Column({ type: 'varchar', length: 32, default: 'ACTIVE' })
     status: 'PENDING' | 'ACTIVE' | 'DISABLED'
 
-    @CreateDateColumn({ type: 'timestamp' })
+    @CreateDateColumn()
     createdDate: Date
 
-    @UpdateDateColumn({ type: 'timestamp' })
+    @UpdateDateColumn()
     updatedDate: Date
 
     @ManyToOne(() => Workspace, (workspace) => workspace.workspaceUsers, { onDelete: 'CASCADE' })

@@ -32,7 +32,7 @@ export class LoginActivity implements ILoginActivity {
     @Column({ nullable: true, type: 'text' })
     userAgent?: string
 
-    @CreateDateColumn({ type: 'timestamp' })
+    @CreateDateColumn()
     createdDate: Date
 
     @ManyToOne(() => User, (user) => user.loginActivities, { onDelete: 'CASCADE' })
