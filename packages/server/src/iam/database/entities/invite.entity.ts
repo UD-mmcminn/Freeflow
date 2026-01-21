@@ -26,16 +26,16 @@ export class Invite implements IInvite {
     @Column({ type: 'text' })
     token: string
 
-    @Column({ nullable: true, type: 'timestamp' })
+    @Column({ nullable: true })
     expiresAt?: Date
 
-    @Column({ nullable: true, type: 'timestamp' })
+    @Column({ nullable: true })
     acceptedAt?: Date
 
-    @CreateDateColumn({ type: 'timestamp' })
+    @CreateDateColumn()
     createdDate: Date
 
-    @UpdateDateColumn({ type: 'timestamp' })
+    @UpdateDateColumn()
     updatedDate: Date
 
     @ManyToOne(() => Organization, { onDelete: 'SET NULL' })

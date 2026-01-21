@@ -20,10 +20,10 @@ export class Workspace implements IWorkspace {
     @Column({ type: 'boolean', default: false })
     isPersonal: boolean
 
-    @CreateDateColumn({ type: 'timestamp' })
+    @CreateDateColumn()
     createdDate: Date
 
-    @UpdateDateColumn({ type: 'timestamp' })
+    @UpdateDateColumn()
     updatedDate: Date
 
     @ManyToOne(() => Organization, (organization) => organization.workspaces, { onDelete: 'CASCADE' })

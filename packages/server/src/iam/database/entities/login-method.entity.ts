@@ -26,10 +26,10 @@ export class LoginMethod implements ILoginMethod {
     @Column({ nullable: true, type: 'text' })
     organizationId?: string
 
-    @CreateDateColumn({ type: 'timestamp' })
+    @CreateDateColumn()
     createdDate: Date
 
-    @UpdateDateColumn({ type: 'timestamp' })
+    @UpdateDateColumn()
     updatedDate: Date
 
     @ManyToOne(() => Organization, (organization) => organization.loginMethods, { onDelete: 'CASCADE' })

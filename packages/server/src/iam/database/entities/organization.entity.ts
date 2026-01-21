@@ -24,10 +24,10 @@ export class Organization implements IOrganization {
     @Column({ nullable: true, type: 'text' })
     productId?: string
 
-    @CreateDateColumn({ type: 'timestamp' })
+    @CreateDateColumn()
     createdDate: Date
 
-    @UpdateDateColumn({ type: 'timestamp' })
+    @UpdateDateColumn()
     updatedDate: Date
 
     @OneToMany(() => Workspace, (workspace) => workspace.organization)

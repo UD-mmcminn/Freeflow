@@ -23,10 +23,10 @@ export class Role implements IRole {
     @Column({ nullable: true, type: 'text' })
     organizationId?: string
 
-    @CreateDateColumn({ type: 'timestamp' })
+    @CreateDateColumn()
     createdDate: Date
 
-    @UpdateDateColumn({ type: 'timestamp' })
+    @UpdateDateColumn()
     updatedDate: Date
 
     @ManyToOne(() => Organization, (organization) => organization.roles, { onDelete: 'CASCADE' })

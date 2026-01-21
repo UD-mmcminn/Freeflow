@@ -22,7 +22,7 @@ export class WorkspaceShared implements IWorkspaceShared {
     @Column({ nullable: true, type: 'text' })
     createdByUserId?: string
 
-    @CreateDateColumn({ type: 'timestamp' })
+    @CreateDateColumn()
     createdDate: Date
 
     @ManyToOne(() => Workspace, (workspace) => workspace.sharedItems, { onDelete: 'CASCADE' })

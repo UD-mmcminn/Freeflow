@@ -26,6 +26,8 @@ import { Workspace } from '../../iam/database/entities/workspace.entity'
 import { WorkspaceUser } from '../../iam/database/entities/workspace-user.entity'
 import { LoginMethod } from '../../iam/database/entities/login-method.entity'
 import { LoginSession } from '../../iam/database/entities/login-session.entity'
+import { UserCredential } from '../../iam/database/entities/user-credential.entity'
+import { Invite } from '../../iam/database/entities/invite.entity'
 
 export const entities = {
     ChatFlow,
@@ -57,5 +59,7 @@ export const entities = {
     Workspace,
     WorkspaceUser,
     LoginMethod,
-    LoginSession
+    LoginSession,
+    UserCredential,
+    Invite
 }

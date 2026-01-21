@@ -18,13 +18,13 @@ export class LoginSession implements ILoginSession {
     @Column({ nullable: true, type: 'text' })
     refreshToken?: string
 
-    @Column({ nullable: true, type: 'timestamp' })
+    @Column({ nullable: true })
     expiresAt?: Date
 
-    @CreateDateColumn({ type: 'timestamp' })
+    @CreateDateColumn()
     createdDate: Date
 
-    @UpdateDateColumn({ type: 'timestamp' })
+    @UpdateDateColumn()
     updatedDate: Date
 
     @ManyToOne(() => User, (user) => user.loginSessions, { onDelete: 'CASCADE' })
