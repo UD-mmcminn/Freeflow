@@ -9,5 +9,5 @@ export interface LogoutRequestBody {
 }
 
 export interface RefreshTokenRequestBody {
-    refreshToken: string
+    refreshToken?: string
 }
