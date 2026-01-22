@@ -13,5 +13,5 @@ No non-permissive or external sources were used—only import paths and filename
 ## Implementation plan (initial)
 
 - Define shared interfaces first (done): `Interface.Iam.ts` now exports `LoggedInUser`, `FeatureFlags`, `JwtPayload`, and `ErrorMessage` for server consumers.
-- Next steps: flesh out RBAC (`Permissions`, `PermissionCheck`), auth middleware (`middleware/passport.ts`), SSO providers, services, routes, and database entities/migrations under `database/`.
+- Next steps: flesh out RBAC (`Permissions`, `PermissionCheck`), auth middleware (`middleware/passport/`), SSO providers, services, routes, and database entities/migrations under `database/`.
 - As pieces are implemented, keep types narrow where possible; today most fields in `LoggedInUser` are optional to keep the build unblocked while functionality is filled in.

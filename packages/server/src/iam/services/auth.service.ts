@@ -2,15 +2,20 @@ import { randomUUID } from 'crypto'
 import { StatusCodes } from 'http-status-codes'
 import { InternalFlowiseError } from '../../errors/internalFlowiseError'
 import { getRunningExpressApp } from '../../utils/getRunningExpressApp'
+import { LoggedInUser } from '../Interface.Iam'
+import { Organization } from '../database/entities/organization.entity'
+import { OrganizationUser } from '../database/entities/organization-user.entity'
 import { User } from '../database/entities/user.entity'
+import { WorkspaceUser } from '../database/entities/workspace-user.entity'
+import { signAccessToken, signRefreshToken, verifyRefreshToken } from '../middleware/passport/auth.tokens'
 import { LoginResponse, RefreshTokenResponse } from '../types/auth.responses'
 import { ILoginSessionService, LoginSessionService } from './login-session.service'
 import { ILocalAuthService, LocalAuthService } from './local-auth.service'
 
 export interface IAuthService {
-    login(payload: { userId?: string; email?: string; password?: string }): Promise<LoginResponse>
+    login(payload: { userId?: string; email?: string; password?: string }): Promise<LoginResponse & { user?: LoggedInUser }>
     logout(sessionToken: string): Promise<void>
-    refreshToken(refreshToken: string): Promise<RefreshTokenResponse>
+    refreshToken(refreshToken: string): Promise<RefreshTokenResponse & { user?: LoggedInUser }>
     startSsoLogin(provider: string): Promise<any>
     handleSsoCallback(provider: string, payload: any): Promise<any>
     logoutSso(sessionToken: string): Promise<void>
@@ -28,7 +33,7 @@ export class AuthService implements IAuthService {
         this.loginSessionService = loginSessionService
     }
 
-    async login(payload: { userId?: string; email?: string; password?: string }): Promise<LoginResponse> {
+    async login(payload: { userId?: string; email?: string; password?: string }): Promise<LoginResponse & { user?: LoggedInUser }> {
         if (!payload.userId && !payload.email) {
             throw new InternalFlowiseError(StatusCodes.BAD_REQUEST, 'Email is required')
         }
@@ -55,18 +60,31 @@ export class AuthService implements IAuthService {
                 }
             }
 
+            const loggedInUser = await this.buildLoggedInUser(manager, user)
+            const tokenPayload = {
+                userId: user.id,
+                orgId: loggedInUser.activeOrganizationId,
+                workspaceId: loggedInUser.activeWorkspaceId
+            }
+            const accessToken = signAccessToken(tokenPayload)
+            const refreshToken = signRefreshToken(tokenPayload)
             const expiresAt = new Date(Date.now() + 7 * 24 * 60 * 60 * 1000)
             const session = await this.loginSessionService.createSession(
                 {
                     userId: user.id,
                     sessionToken: randomUUID(),
-                    refreshToken: randomUUID(),
+                    refreshToken: refreshToken,
                     expiresAt
                 },
                 manager
             )
 
-            return { session }
+            return {
+                session,
+                user: loggedInUser,
+                accessToken,
+                refreshToken
+            }
         })
     }
 
@@ -80,12 +98,13 @@ export class AuthService implements IAuthService {
         })
     }
 
-    async refreshToken(refreshToken: string): Promise<RefreshTokenResponse> {
+    async refreshToken(refreshToken: string): Promise<RefreshTokenResponse & { user?: LoggedInUser }> {
         if (!refreshToken) {
             throw new InternalFlowiseError(StatusCodes.BAD_REQUEST, 'Refresh token is required')
         }
         const appServer = getRunningExpressApp()
         return appServer.AppDataSource.transaction(async (manager) => {
+            verifyRefreshToken(refreshToken)
             const session = await this.loginSessionService.getSessionByRefreshToken(refreshToken, manager)
             if (!session) {
                 throw new InternalFlowiseError(StatusCodes.NOT_FOUND, 'Session not found')
@@ -106,16 +125,29 @@ export class AuthService implements IAuthService {
                 throw new InternalFlowiseError(StatusCodes.FORBIDDEN, 'User is not active')
             }
 
+            const loggedInUser = await this.buildLoggedInUser(manager, user)
+            const tokenPayload = {
+                userId: user.id,
+                orgId: loggedInUser.activeOrganizationId,
+                workspaceId: loggedInUser.activeWorkspaceId
+            }
+            const accessToken = signAccessToken(tokenPayload)
+            const nextRefreshToken = signRefreshToken(tokenPayload)
             const updated = await this.loginSessionService.rotateSessionTokens(
                 session,
                 {
-                    sessionToken: randomUUID(),
-                    refreshToken: randomUUID(),
+                    sessionToken: session.sessionToken,
+                    refreshToken: nextRefreshToken,
                     expiresAt: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000)
                 },
                 manager
             )
-            return { session: updated }
+            return {
+                session: updated,
+                user: loggedInUser,
+                accessToken,
+                refreshToken: nextRefreshToken
+            }
         })
     }
 
@@ -129,6 +161,60 @@ export class AuthService implements IAuthService {
 
     async logoutSso(_sessionToken: string): Promise<void> {
         return
+    }
+
+    private async buildLoggedInUser(manager: any, user: User): Promise<LoggedInUser> {
+        const organizationUserRepository = manager.getRepository(OrganizationUser)
+        const organizationRepository = manager.getRepository(Organization)
+        const workspaceUserRepository = manager.getRepository(WorkspaceUser)
+
+        const organizationUsers = await organizationUserRepository.find({
+            where: { userId: user.id },
+            relations: ['organization']
+        })
+        const activeOrganizationUser =
+            organizationUsers.find((entry: OrganizationUser) => entry.status === 'ACTIVE') ?? organizationUsers[0]
+        const activeOrganizationId = activeOrganizationUser?.organizationId ?? process.env.DEFAULT_ORG_ID ?? ''
+        const organization = activeOrganizationId
+            ? await organizationRepository.findOneBy({ id: activeOrganizationId })
+            : null
+
+        const workspaceUsers = await workspaceUserRepository.find({
+            where: { userId: user.id },
+            relations: ['workspace', 'role']
+        })
+        const preferredWorkspace =
+            workspaceUsers.find(
+                (entry: WorkspaceUser) =>
+                    entry.status === 'ACTIVE' && entry.workspace?.organizationId === activeOrganizationId
+            ) ??
+            workspaceUsers.find((entry: WorkspaceUser) => entry.workspace?.organizationId === activeOrganizationId) ??
+            workspaceUsers[0]
+
+        const identityManager = getRunningExpressApp().identityManager
+        const features =
+            identityManager && organization?.subscriptionId
+                ? await identityManager.getFeaturesByPlan(organization.subscriptionId)
+                : {}
+
+        return {
+            id: user.id,
+            email: user.email,
+            firstName: user.firstName,
+            lastName: user.lastName,
+            permissions: [],
+            roles: [],
+            isOrganizationAdmin: activeOrganizationUser?.isOwner ?? false,
+            activeOrganizationId: activeOrganizationId,
+            activeOrganizationSubscriptionId: organization?.subscriptionId,
+            activeOrganizationCustomerId: organization?.customerId,
+            activeOrganizationProductId: organization?.productId,
+            activeWorkspaceId: preferredWorkspace?.workspaceId ?? process.env.DEFAULT_WORKSPACE_ID ?? '',
+            activeWorkspace: preferredWorkspace?.workspace?.name,
+            activeWorkspaceRole: preferredWorkspace?.role?.name,
+            features,
+            authStrategy: 'local'
+        }
     }
 }
 
