@@ -1,9 +1,9 @@
 import express from 'express'
 import logController from '../../controllers/log'
-import { checkAnyPermission } from '../../iam/rbac/PermissionCheck'
+import { checkAnyWorkspacePermission } from '../../iam/rbac/PermissionCheck'
 const router = express.Router()
 
 // READ
-router.get('/', checkAnyPermission('logs:view'), logController.getLogs)
+router.get('/', checkAnyWorkspacePermission('logs:view'), logController.getLogs)
 
 export default router

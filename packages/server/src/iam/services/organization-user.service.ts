@@ -10,6 +10,7 @@ import { ILoginSessionService, LoginSessionService } from './login-session.servi
 
 export interface IOrganizationUserService {
     listOrganizationUsers(filters?: { organizationId?: string; userId?: string }): Promise<OrganizationUser[]>
+    getOrganizationRoleForUser(organizationId: string, userId: string): Promise<OrganizationUser | null>
     getOrganizationUserById(organizationUserId: string): Promise<OrganizationUser | null>
     createOrganizationUser(payload: any): Promise<OrganizationUser>
     updateOrganizationUser(payload: {
@@ -40,6 +41,24 @@ export class OrganizationUserService implements IOrganizationUserService {
                 where: Object.keys(where).length ? where : undefined,
                 relations: ['organization', 'user', 'role']
             })
+        })
+    }
+
+    async getOrganizationRoleForUser(organizationId: string, userId: string): Promise<OrganizationUser | null> {
+        if (!organizationId || !userId) {
+            throw new InternalFlowiseError(StatusCodes.BAD_REQUEST, 'Organization id and user id are required')
+        }
+        const appServer = getRunningExpressApp()
+        return appServer.AppDataSource.transaction(async (manager) => {
+            const repository = manager.getRepository(OrganizationUser)
+            const organizationUser = await repository.findOne({
+                where: { organizationId, userId },
+                relations: ['role']
+            })
+            if (!organizationUser || organizationUser.status !== 'ACTIVE') {
+                return null
+            }
+            return organizationUser
         })
     }
 

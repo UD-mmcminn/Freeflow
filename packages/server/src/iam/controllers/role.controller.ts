@@ -1,32 +1,116 @@
-import { Request, Response } from 'express'
+import { NextFunction, Request, Response } from 'express'
+import { StatusCodes } from 'http-status-codes'
+import { InternalFlowiseError } from '../../errors/internalFlowiseError'
+import { LoggedInUser, RoleScope } from '../Interface.Iam'
+import RoleService from '../services/role.service'
 
 export interface IRoleController {
-    listRoles(req: Request, res: Response): Promise<Response>
-    getRole(req: Request, res: Response): Promise<Response>
-    createRole(req: Request, res: Response): Promise<Response>
-    updateRole(req: Request, res: Response): Promise<Response>
-    deleteRole(req: Request, res: Response): Promise<Response>
+    listRoles(req: Request, res: Response, next: NextFunction): Promise<Response | void>
+    getRole(req: Request, res: Response, next: NextFunction): Promise<Response | void>
+    getRoleByName(req: Request, res: Response, next: NextFunction): Promise<Response | void>
+    createRole(req: Request, res: Response, next: NextFunction): Promise<Response | void>
+    updateRole(req: Request, res: Response, next: NextFunction): Promise<Response | void>
+    deleteRole(req: Request, res: Response, next: NextFunction): Promise<Response | void>
 }
 
 export class RoleController implements IRoleController {
-    async listRoles(_req: Request, res: Response): Promise<Response> {
-        return res.status(501).json({ message: 'Not implemented' })
+    private roleService: RoleService
+
+    constructor(roleService: RoleService = new RoleService()) {
+        this.roleService = roleService
     }
 
-    async getRole(_req: Request, res: Response): Promise<Response> {
-        return res.status(501).json({ message: 'Not implemented' })
+    async listRoles(req: Request, res: Response, next: NextFunction): Promise<Response | void> {
+        try {
+            const user = this.requireUser(req)
+            const organizationId = req.query?.organizationId as string | undefined
+            const scope = req.query?.scope as RoleScope | undefined
+            const roles = await this.roleService.listRoles(organizationId, scope, user)
+            return res.status(StatusCodes.OK).json(roles)
+        } catch (error) {
+            next(error)
+        }
     }
 
-    async createRole(_req: Request, res: Response): Promise<Response> {
-        return res.status(501).json({ message: 'Not implemented' })
+    async getRole(req: Request, res: Response, next: NextFunction): Promise<Response | void> {
+        try {
+            const user = this.requireUser(req)
+            const roleId = (req.params?.roleId as string | undefined) ?? (req.query?.id as string | undefined)
+            if (!roleId) {
+                throw new InternalFlowiseError(StatusCodes.BAD_REQUEST, 'Role id is required')
+            }
+            const role = await this.roleService.getRoleById(roleId, user)
+            if (!role) {
+                throw new InternalFlowiseError(StatusCodes.NOT_FOUND, 'Role not found')
+            }
+            return res.status(StatusCodes.OK).json(role)
+        } catch (error) {
+            next(error)
+        }
     }
 
-    async updateRole(_req: Request, res: Response): Promise<Response> {
-        return res.status(501).json({ message: 'Not implemented' })
+    async getRoleByName(req: Request, res: Response, next: NextFunction): Promise<Response | void> {
+        try {
+            const user = this.requireUser(req)
+            const name = req.params?.name as string | undefined
+            if (!name) {
+                throw new InternalFlowiseError(StatusCodes.BAD_REQUEST, 'Role name is required')
+            }
+            const organizationId = req.query?.organizationId as string | undefined
+            const role = await this.roleService.getRoleByName(name, organizationId, user)
+            if (!role) {
+                throw new InternalFlowiseError(StatusCodes.NOT_FOUND, 'Role not found')
+            }
+            return res.status(StatusCodes.OK).json(role)
+        } catch (error) {
+            next(error)
+        }
     }
 
-    async deleteRole(_req: Request, res: Response): Promise<Response> {
-        return res.status(501).json({ message: 'Not implemented' })
+    async createRole(req: Request, res: Response, next: NextFunction): Promise<Response | void> {
+        try {
+            const user = this.requireUser(req)
+            const role = await this.roleService.createRole(req.body ?? {}, user)
+            return res.status(StatusCodes.OK).json(role)
+        } catch (error) {
+            next(error)
+        }
+    }
+
+    async updateRole(req: Request, res: Response, next: NextFunction): Promise<Response | void> {
+        try {
+            const user = this.requireUser(req)
+            const roleId = (req.body?.id as string | undefined) ?? (req.query?.id as string | undefined)
+            if (!roleId) {
+                throw new InternalFlowiseError(StatusCodes.BAD_REQUEST, 'Role id is required')
+            }
+            const role = await this.roleService.updateRole(roleId, req.body ?? {}, user)
+            return res.status(StatusCodes.OK).json(role)
+        } catch (error) {
+            next(error)
+        }
+    }
+
+    async deleteRole(req: Request, res: Response, next: NextFunction): Promise<Response | void> {
+        try {
+            const user = this.requireUser(req)
+            const roleId = (req.params?.roleId as string | undefined) ?? (req.query?.id as string | undefined)
+            if (!roleId) {
+                throw new InternalFlowiseError(StatusCodes.BAD_REQUEST, 'Role id is required')
+            }
+            await this.roleService.deleteRole(roleId, user)
+            return res.status(StatusCodes.OK).json({ message: 'Role deleted' })
+        } catch (error) {
+            next(error)
+        }
+    }
+
+    private requireUser(req: Request): LoggedInUser {
+        const user = req.user as LoggedInUser | undefined
+        if (!user) {
+            throw new InternalFlowiseError(StatusCodes.UNAUTHORIZED, 'Unauthorized')
+        }
+        return user
     }
 }
 

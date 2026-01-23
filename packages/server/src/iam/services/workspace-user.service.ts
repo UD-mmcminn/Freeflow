@@ -9,6 +9,7 @@ export enum WorkspaceUserErrorMessage {
 export interface IWorkspaceUserService {
     readWorkspaceUserByUserId(userId: string, queryRunner?: any): Promise<any[]>
     listWorkspaceUsers(workspaceId?: string): Promise<any[]>
+    getWorkspaceRoleForUser(workspaceId: string, userId: string): Promise<WorkspaceUser | null>
     getWorkspaceUserById(workspaceUserId: string): Promise<any | null>
     createWorkspaceUser(payload: any): Promise<any>
     updateWorkspaceUser(workspaceUserId: string | undefined, payload: any): Promise<any>
@@ -37,6 +38,24 @@ export class WorkspaceUserService implements IWorkspaceUserService {
                 where: workspaceId ? { workspaceId } : undefined,
                 relations: ['workspace', 'user', 'role']
             })
+        })
+    }
+
+    async getWorkspaceRoleForUser(workspaceId: string, userId: string): Promise<WorkspaceUser | null> {
+        if (!workspaceId || !userId) {
+            throw new InternalFlowiseError(StatusCodes.BAD_REQUEST, 'Workspace id and user id are required')
+        }
+        const appServer = getRunningExpressApp()
+        return appServer.AppDataSource.transaction(async (manager) => {
+            const repository = manager.getRepository(WorkspaceUser)
+            const workspaceUser = await repository.findOne({
+                where: { workspaceId, userId },
+                relations: ['role']
+            })
+            if (!workspaceUser || workspaceUser.status !== 'ACTIVE') {
+                return null
+            }
+            return workspaceUser
         })
     }
 

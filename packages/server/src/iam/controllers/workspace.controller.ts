@@ -1,4 +1,4 @@
-import { Request, Response } from 'express'
+import { NextFunction, Request, Response } from 'express'
 import { StatusCodes } from 'http-status-codes'
 import { InternalFlowiseError } from '../../errors/internalFlowiseError'
 import { signAccessToken, signRefreshToken, verifyRefreshToken } from '../middleware/passport/auth.tokens'
@@ -14,12 +14,12 @@ import WorkspaceSharedService from '../services/workspace-shared.service'
 import { getRunningExpressApp } from '../../utils/getRunningExpressApp'
 
 export interface IWorkspaceController {
-    listWorkspaces(req: Request, res: Response): Promise<Response>
-    getWorkspace(req: Request, res: Response): Promise<Response>
-    createWorkspace(req: Request, res: Response): Promise<Response>
-    updateWorkspace(req: Request, res: Response): Promise<Response>
-    deleteWorkspace(req: Request, res: Response): Promise<Response>
-    switchWorkspace(req: Request, res: Response): Promise<Response>
+    listWorkspaces(req: Request, res: Response, next: NextFunction): Promise<Response | void>
+    getWorkspace(req: Request, res: Response, next: NextFunction): Promise<Response | void>
+    createWorkspace(req: Request, res: Response, next: NextFunction): Promise<Response | void>
+    updateWorkspace(req: Request, res: Response, next: NextFunction): Promise<Response | void>
+    deleteWorkspace(req: Request, res: Response, next: NextFunction): Promise<Response | void>
+    switchWorkspace(req: Request, res: Response, next: NextFunction): Promise<Response | void>
 }
 
 export class WorkspaceController implements IWorkspaceController {
@@ -34,7 +34,7 @@ export class WorkspaceController implements IWorkspaceController {
         this.workspaceSharedService = workspaceSharedService
     }
 
-    async listWorkspaces(req: Request, res: Response): Promise<Response> {
+    async listWorkspaces(req: Request, res: Response, next: NextFunction): Promise<Response | void> {
         try {
             const workspaceId = (req.query?.id as string | undefined) ?? (req.query?.workspaceId as string | undefined)
             if (workspaceId) {
@@ -48,11 +48,11 @@ export class WorkspaceController implements IWorkspaceController {
             const workspaces = await this.workspaceService.listWorkspaces(organizationId)
             return res.status(StatusCodes.OK).json(workspaces)
         } catch (error) {
-            return this.handleError(res, error)
+            next(error)
         }
     }
 
-    async getWorkspace(req: Request, res: Response): Promise<Response> {
+    async getWorkspace(req: Request, res: Response, next: NextFunction): Promise<Response | void> {
         try {
             const workspaceId = (req.params?.workspaceId as string | undefined) ?? (req.query?.id as string | undefined)
             if (!workspaceId) {
@@ -64,20 +64,20 @@ export class WorkspaceController implements IWorkspaceController {
             }
             return res.status(StatusCodes.OK).json(workspace)
         } catch (error) {
-            return this.handleError(res, error)
+            next(error)
         }
     }
 
-    async createWorkspace(req: Request, res: Response): Promise<Response> {
+    async createWorkspace(req: Request, res: Response, next: NextFunction): Promise<Response | void> {
         try {
             const workspace = await this.workspaceService.createWorkspace(req.body ?? {})
             return res.status(StatusCodes.CREATED).json(workspace)
         } catch (error) {
-            return this.handleError(res, error)
+            next(error)
         }
     }
 
-    async updateWorkspace(req: Request, res: Response): Promise<Response> {
+    async updateWorkspace(req: Request, res: Response, next: NextFunction): Promise<Response | void> {
         try {
             const workspaceId = (req.body?.id as string | undefined) ?? (req.query?.id as string | undefined)
             if (!workspaceId) {
@@ -86,11 +86,11 @@ export class WorkspaceController implements IWorkspaceController {
             const workspace = await this.workspaceService.updateWorkspace(workspaceId, req.body ?? {})
             return res.status(StatusCodes.OK).json(workspace)
         } catch (error) {
-            return this.handleError(res, error)
+            next(error)
         }
     }
 
-    async deleteWorkspace(req: Request, res: Response): Promise<Response> {
+    async deleteWorkspace(req: Request, res: Response, next: NextFunction): Promise<Response | void> {
         try {
             const workspaceId = (req.params?.workspaceId as string | undefined) ?? (req.query?.id as string | undefined)
             if (!workspaceId) {
@@ -99,11 +99,11 @@ export class WorkspaceController implements IWorkspaceController {
             await this.workspaceService.deleteWorkspace(workspaceId)
             return res.status(StatusCodes.OK).json({ message: 'Workspace deleted' })
         } catch (error) {
-            return this.handleError(res, error)
+            next(error)
         }
     }
 
-    async switchWorkspace(req: Request, res: Response): Promise<Response> {
+    async switchWorkspace(req: Request, res: Response, next: NextFunction): Promise<Response | void> {
         try {
             const workspaceId = (req.query?.id as string | undefined) ?? (req.body?.id as string | undefined)
             if (!workspaceId) {
@@ -146,9 +146,13 @@ export class WorkspaceController implements IWorkspaceController {
                     identityManager && organization?.subscriptionId
                         ? await identityManager.getFeaturesByPlan(organization.subscriptionId)
                         : {}
+                const permissions = this.parsePermissions(workspaceUser.role?.permissions)
+                const roles = workspaceUser.role?.name ? [workspaceUser.role.name] : []
 
                 const updatedUser: LoggedInUser = {
                     ...sessionUser,
+                    permissions,
+                    roles,
                     activeOrganizationId: workspace.organizationId,
                     activeOrganizationSubscriptionId: organization?.subscriptionId,
                     activeOrganizationCustomerId: organization?.customerId,
@@ -231,11 +235,11 @@ export class WorkspaceController implements IWorkspaceController {
 
             return res.status(StatusCodes.OK).json(result)
         } catch (error) {
-            return this.handleError(res, error)
+            next(error)
         }
     }
 
-    async listWorkspaceShares(req: Request, res: Response): Promise<Response> {
+    async listWorkspaceShares(req: Request, res: Response, next: NextFunction): Promise<Response | void> {
         try {
             const sharedItemId = req.params?.sharedItemId as string | undefined
             if (!sharedItemId) {
@@ -246,11 +250,11 @@ export class WorkspaceController implements IWorkspaceController {
             })
             return res.status(StatusCodes.OK).json(shared)
         } catch (error) {
-            return this.handleError(res, error)
+            next(error)
         }
     }
 
-    async setWorkspaceShares(req: Request, res: Response): Promise<Response> {
+    async setWorkspaceShares(req: Request, res: Response, next: NextFunction): Promise<Response | void> {
         try {
             const sharedItemId = req.params?.sharedItemId as string | undefined
             const itemType = req.body?.itemType
@@ -265,15 +269,20 @@ export class WorkspaceController implements IWorkspaceController {
             })
             return res.status(StatusCodes.OK).json(updated)
         } catch (error) {
-            return this.handleError(res, error)
+            next(error)
         }
     }
 
-    private handleError(res: Response, error: unknown): Response {
-        if (error instanceof InternalFlowiseError) {
-            return res.status(error.statusCode).json({ message: error.message })
+    private parsePermissions(raw: string | undefined): string[] {
+        if (!raw) {
+            return []
         }
-        return res.status(StatusCodes.INTERNAL_SERVER_ERROR).json({ message: 'Internal server error' })
+        try {
+            const parsed = JSON.parse(raw)
+            return Array.isArray(parsed) ? parsed : []
+        } catch {
+            return []
+        }
     }
 }
 

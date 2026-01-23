@@ -1,14 +1,14 @@
-import { Request, Response } from 'express'
+import { NextFunction, Request, Response } from 'express'
 import { StatusCodes } from 'http-status-codes'
 import { InternalFlowiseError } from '../../errors/internalFlowiseError'
 import OrganizationService from '../services/organization.service'
 
 export interface IOrganizationController {
-    listOrganizations(req: Request, res: Response): Promise<Response>
-    getOrganization(req: Request, res: Response): Promise<Response>
-    createOrganization(req: Request, res: Response): Promise<Response>
-    updateOrganization(req: Request, res: Response): Promise<Response>
-    deleteOrganization(req: Request, res: Response): Promise<Response>
+    listOrganizations(req: Request, res: Response, next: NextFunction): Promise<Response | void>
+    getOrganization(req: Request, res: Response, next: NextFunction): Promise<Response | void>
+    createOrganization(req: Request, res: Response, next: NextFunction): Promise<Response | void>
+    updateOrganization(req: Request, res: Response, next: NextFunction): Promise<Response | void>
+    deleteOrganization(req: Request, res: Response, next: NextFunction): Promise<Response | void>
 }
 
 export class OrganizationController implements IOrganizationController {
@@ -18,7 +18,7 @@ export class OrganizationController implements IOrganizationController {
         this.organizationService = organizationService
     }
 
-    async listOrganizations(req: Request, res: Response): Promise<Response> {
+    async listOrganizations(req: Request, res: Response, next: NextFunction): Promise<Response | void> {
         try {
             const organizationId = (req.query?.organizationId as string | undefined) ?? (req.query?.id as string | undefined)
             if (organizationId) {
@@ -31,11 +31,11 @@ export class OrganizationController implements IOrganizationController {
             const organizations = await this.organizationService.listOrganizations()
             return res.status(StatusCodes.OK).json({ organizations })
         } catch (error) {
-            return this.handleError(res, error)
+            next(error)
         }
     }
 
-    async getOrganization(req: Request, res: Response): Promise<Response> {
+    async getOrganization(req: Request, res: Response, next: NextFunction): Promise<Response | void> {
         try {
             const organizationId = (req.params?.organizationId as string | undefined) ?? (req.query?.id as string | undefined)
             if (!organizationId) {
@@ -47,20 +47,20 @@ export class OrganizationController implements IOrganizationController {
             }
             return res.status(StatusCodes.OK).json({ organization })
         } catch (error) {
-            return this.handleError(res, error)
+            next(error)
         }
     }
 
-    async createOrganization(req: Request, res: Response): Promise<Response> {
+    async createOrganization(req: Request, res: Response, next: NextFunction): Promise<Response | void> {
         try {
             const organization = await this.organizationService.createOrganization(req.body)
             return res.status(StatusCodes.CREATED).json({ organization })
         } catch (error) {
-            return this.handleError(res, error)
+            next(error)
         }
     }
 
-    async updateOrganization(req: Request, res: Response): Promise<Response> {
+    async updateOrganization(req: Request, res: Response, next: NextFunction): Promise<Response | void> {
         try {
             const organizationId = (req.body?.id as string | undefined) ?? (req.query?.id as string | undefined)
             if (!organizationId) {
@@ -69,11 +69,11 @@ export class OrganizationController implements IOrganizationController {
             const organization = await this.organizationService.updateOrganization(organizationId, req.body)
             return res.status(StatusCodes.OK).json({ organization })
         } catch (error) {
-            return this.handleError(res, error)
+            next(error)
         }
     }
 
-    async deleteOrganization(req: Request, res: Response): Promise<Response> {
+    async deleteOrganization(req: Request, res: Response, next: NextFunction): Promise<Response | void> {
         try {
             const organizationId = (req.query?.id as string | undefined) ?? (req.body?.id as string | undefined)
             if (!organizationId) {
@@ -82,15 +82,8 @@ export class OrganizationController implements IOrganizationController {
             await this.organizationService.deleteOrganization(organizationId)
             return res.status(StatusCodes.OK).json({ message: 'Organization deleted' })
         } catch (error) {
-            return this.handleError(res, error)
+            next(error)
         }
-    }
-
-    private handleError(res: Response, error: unknown): Response {
-        if (error instanceof InternalFlowiseError) {
-            return res.status(error.statusCode).json({ message: error.message })
-        }
-        return res.status(StatusCodes.INTERNAL_SERVER_ERROR).json({ message: 'Internal server error' })
     }
 }
 

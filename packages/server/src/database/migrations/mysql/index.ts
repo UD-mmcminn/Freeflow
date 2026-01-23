@@ -55,6 +55,7 @@ import { AddSSOColumns1730519457880 } from '../../../iam/database/migrations/mys
 import { AddPersonalWorkspace1734074497540 } from '../../../iam/database/migrations/mysql/1734074497540-AddPersonalWorkspace'
 import { RefactorIamDatabase1737076223692 } from '../../../iam/database/migrations/mysql/1737076223692-RefactorIamDatabase'
 import { ExecutionLinkWorkspaceId1746862866554 } from '../../../iam/database/migrations/mysql/1746862866554-ExecutionLinkWorkspaceId'
+import { AddRoleDescription1747000000000 } from '../../../iam/database/migrations/mysql/1747000000000-AddRoleDescription'
 
 export const mysqlMigrations = [
     Init1693840429259,
@@ -106,6 +107,7 @@ export const mysqlMigrations = [
     AddErrorToEvaluationRun1744964560174,
     FixErrorsColumnInEvaluationRun1746437114935,
     ExecutionLinkWorkspaceId1746862866554,
+    AddRoleDescription1747000000000,
     ModifyExecutionDataColumnType1747902489801,
     AddTextToSpeechToChatFlow1754986468397,
     ModifyChatflowType1755066758601,

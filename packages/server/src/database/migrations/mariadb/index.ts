@@ -54,6 +54,7 @@ import { AddSSOColumns1730519457880 } from '../../../iam/database/migrations/mar
 import { AddPersonalWorkspace1734074497540 } from '../../../iam/database/migrations/mariadb/1734074497540-AddPersonalWorkspace'
 import { RefactorIamDatabase1737076223692 } from '../../../iam/database/migrations/mariadb/1737076223692-RefactorIamDatabase'
 import { ExecutionLinkWorkspaceId1746862866554 } from '../../../iam/database/migrations/mariadb/1746862866554-ExecutionLinkWorkspaceId'
+import { AddRoleDescription1747000000000 } from '../../../iam/database/migrations/mariadb/1747000000000-AddRoleDescription'
 
 export const mariadbMigrations = [
     Init1693840429259,
@@ -104,6 +105,7 @@ export const mariadbMigrations = [
     FixOpenSourceAssistantTable1743758056188,
     AddErrorToEvaluationRun1744964560174,
     ExecutionLinkWorkspaceId1746862866554,
+    AddRoleDescription1747000000000,
     ModifyExecutionDataColumnType1747902489801,
     AddTextToSpeechToChatFlow1754986457485,
     ModifyChatflowType1755066758601,

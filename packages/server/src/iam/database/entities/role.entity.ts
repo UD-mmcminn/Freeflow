@@ -14,8 +14,11 @@ export class Role implements IRole {
     @Column({ type: 'text' })
     name: string
 
-    @Column({ nullable: false, type: 'simple-json', default: '[]' })
-    permissions: any
+    @Column({ nullable: true, type: 'text' })
+    description?: string
+
+    @Column({ type: 'text', default: '[]' })
+    permissions: string
 
     @Column({ type: 'text', default: 'organization' })
     scope: RoleScope

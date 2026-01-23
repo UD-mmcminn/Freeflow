@@ -1,4 +1,4 @@
-import { Request, Response } from 'express'
+import { NextFunction, Request, Response } from 'express'
 import { StatusCodes } from 'http-status-codes'
 import { InternalFlowiseError } from '../../errors/internalFlowiseError'
 import { getRunningExpressApp } from '../../utils/getRunningExpressApp'
@@ -12,10 +12,10 @@ import {
 } from '../types/local-auth.requests'
 
 export interface ILocalAuthController {
-    setPassword(req: Request, res: Response): Promise<Response>
-    verifyPassword(req: Request, res: Response): Promise<Response>
-    resetPassword(req: Request, res: Response): Promise<Response>
-    changePassword(req: Request, res: Response): Promise<Response>
+    setPassword(req: Request, res: Response, next: NextFunction): Promise<Response | void>
+    verifyPassword(req: Request, res: Response, next: NextFunction): Promise<Response | void>
+    resetPassword(req: Request, res: Response, next: NextFunction): Promise<Response | void>
+    changePassword(req: Request, res: Response, next: NextFunction): Promise<Response | void>
 }
 
 export class LocalAuthController implements ILocalAuthController {
@@ -25,7 +25,7 @@ export class LocalAuthController implements ILocalAuthController {
         this.localAuthService = localAuthService
     }
 
-    async setPassword(req: Request, res: Response): Promise<Response> {
+    async setPassword(req: Request, res: Response, next: NextFunction): Promise<Response | void> {
         try {
             const body = req.body as SetPasswordRequestBody
             const password = body?.password
@@ -36,11 +36,11 @@ export class LocalAuthController implements ILocalAuthController {
             await this.localAuthService.setPassword(userId, password)
             return res.status(StatusCodes.OK).json({ message: 'Password set' })
         } catch (error) {
-            return this.handleError(res, error)
+            next(error)
         }
     }
 
-    async verifyPassword(req: Request, res: Response): Promise<Response> {
+    async verifyPassword(req: Request, res: Response, next: NextFunction): Promise<Response | void> {
         try {
             const body = req.body as VerifyPasswordRequestBody
             const password = body?.password
@@ -51,11 +51,11 @@ export class LocalAuthController implements ILocalAuthController {
             const valid = await this.localAuthService.verifyPassword(userId, password)
             return res.status(StatusCodes.OK).json({ valid })
         } catch (error) {
-            return this.handleError(res, error)
+            next(error)
         }
     }
 
-    async resetPassword(req: Request, res: Response): Promise<Response> {
+    async resetPassword(req: Request, res: Response, next: NextFunction): Promise<Response | void> {
         try {
             const body = req.body as ResetPasswordRequestBody
             const token = body?.token
@@ -69,11 +69,11 @@ export class LocalAuthController implements ILocalAuthController {
             await this.localAuthService.resetPassword(token, password)
             return res.status(StatusCodes.OK).json({ message: 'Password updated' })
         } catch (error) {
-            return this.handleError(res, error)
+            next(error)
         }
     }
 
-    async changePassword(req: Request, res: Response): Promise<Response> {
+    async changePassword(req: Request, res: Response, next: NextFunction): Promise<Response | void> {
         try {
             const body = req.body as ChangePasswordRequestBody
             if (!body?.currentPassword || !body?.newPassword) {
@@ -83,7 +83,7 @@ export class LocalAuthController implements ILocalAuthController {
             await this.localAuthService.changePassword(userId, body.currentPassword, body.newPassword)
             return res.status(StatusCodes.OK).json({ message: 'Password updated' })
         } catch (error) {
-            return this.handleError(res, error)
+            next(error)
         }
     }
 
@@ -103,12 +103,6 @@ export class LocalAuthController implements ILocalAuthController {
         })
     }
 
-    private handleError(res: Response, error: unknown): Response {
-        if (error instanceof InternalFlowiseError) {
-            return res.status(error.statusCode).json({ message: error.message })
-        }
-        return res.status(StatusCodes.INTERNAL_SERVER_ERROR).json({ message: 'Internal server error' })
-    }
 }
 
 export default LocalAuthController

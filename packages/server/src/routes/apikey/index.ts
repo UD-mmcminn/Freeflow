@@ -1,18 +1,18 @@
 import express from 'express'
 import apikeyController from '../../controllers/apikey'
-import { checkAnyPermission, checkPermission } from '../../iam/rbac/PermissionCheck'
+import { checkAnyWorkspacePermission, checkWorkspacePermission } from '../../iam/rbac/PermissionCheck'
 const router = express.Router()
 
 // CREATE
-router.post('/', checkPermission('apikeys:create'), apikeyController.createApiKey)
+router.post('/', checkWorkspacePermission('apikeys:create'), apikeyController.createApiKey)
 
 // READ
-router.get('/', checkPermission('apikeys:view'), apikeyController.getAllApiKeys)
+router.get('/', checkWorkspacePermission('apikeys:view'), apikeyController.getAllApiKeys)
 
 // UPDATE
-router.put(['/', '/:id'], checkAnyPermission('apikeys:create,apikeys:update'), apikeyController.updateApiKey)
+router.put(['/', '/:id'], checkAnyWorkspacePermission('apikeys:create,apikeys:update'), apikeyController.updateApiKey)
 
 // DELETE
-router.delete(['/', '/:id'], checkPermission('apikeys:delete'), apikeyController.deleteApiKey)
+router.delete(['/', '/:id'], checkWorkspacePermission('apikeys:delete'), apikeyController.deleteApiKey)
 
 export default router

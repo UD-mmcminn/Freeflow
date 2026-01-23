@@ -1,4 +1,4 @@
-import { Request, Response } from 'express'
+import { NextFunction, Request, Response } from 'express'
 import { StatusCodes } from 'http-status-codes'
 import { In } from 'typeorm'
 import { getRunningExpressApp } from '../../utils/getRunningExpressApp'
@@ -7,11 +7,11 @@ import { WorkspaceUser } from '../database/entities/workspace-user.entity'
 import OrganizationUserService from '../services/organization-user.service'
 
 export interface IOrganizationUserController {
-    listOrganizationUsers(req: Request, res: Response): Promise<Response>
-    getOrganizationUser(req: Request, res: Response): Promise<Response>
-    createOrganizationUser(req: Request, res: Response): Promise<Response>
-    updateOrganizationUser(req: Request, res: Response): Promise<Response>
-    deleteOrganizationUser(req: Request, res: Response): Promise<Response>
+    listOrganizationUsers(req: Request, res: Response, next: NextFunction): Promise<Response | void>
+    getOrganizationUser(req: Request, res: Response, next: NextFunction): Promise<Response | void>
+    createOrganizationUser(req: Request, res: Response, next: NextFunction): Promise<Response | void>
+    updateOrganizationUser(req: Request, res: Response, next: NextFunction): Promise<Response | void>
+    deleteOrganizationUser(req: Request, res: Response, next: NextFunction): Promise<Response | void>
 }
 
 export class OrganizationUserController implements IOrganizationUserController {
@@ -21,7 +21,7 @@ export class OrganizationUserController implements IOrganizationUserController {
         this.organizationUserService = organizationUserService
     }
 
-    async listOrganizationUsers(req: Request, res: Response): Promise<Response> {
+    async listOrganizationUsers(req: Request, res: Response, next: NextFunction): Promise<Response | void> {
         try {
             const organizationId = req.query?.organizationId as string | undefined
             const userId = req.query?.userId as string | undefined
@@ -29,11 +29,11 @@ export class OrganizationUserController implements IOrganizationUserController {
             const mapped = await this.mapOrganizationUsers(results)
             return res.status(StatusCodes.OK).json(mapped)
         } catch (error) {
-            return this.handleError(res, error)
+            next(error)
         }
     }
 
-    async getOrganizationUser(req: Request, res: Response): Promise<Response> {
+    async getOrganizationUser(req: Request, res: Response, next: NextFunction): Promise<Response | void> {
         try {
             const organizationId = req.query?.organizationId as string | undefined
             const userId = req.query?.userId as string | undefined
@@ -44,15 +44,15 @@ export class OrganizationUserController implements IOrganizationUserController {
             const mapped = await this.mapOrganizationUsers(results)
             return res.status(StatusCodes.OK).json(mapped)
         } catch (error) {
-            return this.handleError(res, error)
+            next(error)
         }
     }
 
-    async createOrganizationUser(_req: Request, res: Response): Promise<Response> {
+    async createOrganizationUser(_req: Request, res: Response, _next: NextFunction): Promise<Response> {
         return res.status(501).json({ message: 'Not implemented' })
     }
 
-    async updateOrganizationUser(req: Request, res: Response): Promise<Response> {
+    async updateOrganizationUser(req: Request, res: Response, next: NextFunction): Promise<Response | void> {
         try {
             const body = req.body ?? {}
             const updated = await this.organizationUserService.updateOrganizationUser({
@@ -64,11 +64,11 @@ export class OrganizationUserController implements IOrganizationUserController {
             })
             return res.status(StatusCodes.OK).json(updated)
         } catch (error) {
-            return this.handleError(res, error)
+            next(error)
         }
     }
 
-    async deleteOrganizationUser(req: Request, res: Response): Promise<Response> {
+    async deleteOrganizationUser(req: Request, res: Response, next: NextFunction): Promise<Response | void> {
         try {
             const organizationId = req.query?.organizationId as string | undefined
             const userId = req.query?.userId as string | undefined
@@ -78,7 +78,7 @@ export class OrganizationUserController implements IOrganizationUserController {
             await this.organizationUserService.deleteOrganizationUser(organizationId, userId)
             return res.status(StatusCodes.OK).json({ message: 'Organization user deleted' })
         } catch (error) {
-            return this.handleError(res, error)
+            next(error)
         }
     }
 
@@ -126,18 +126,6 @@ export class OrganizationUserController implements IOrganizationUserController {
         return status
     }
 
-    private handleError(res: Response, error: unknown): Response {
-        if (error instanceof Error && 'statusCode' in error) {
-            const statusCode = (error as { statusCode?: number }).statusCode
-            if (statusCode) {
-                return res.status(statusCode).json({ message: error.message })
-            }
-        }
-        if (error instanceof Error) {
-            return res.status(StatusCodes.INTERNAL_SERVER_ERROR).json({ message: error.message })
-        }
-        return res.status(StatusCodes.INTERNAL_SERVER_ERROR).json({ message: 'Internal server error' })
-    }
 }
 
 export default OrganizationUserController

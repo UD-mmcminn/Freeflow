@@ -48,6 +48,7 @@ export class RefactorIamDatabase1737076223692 implements MigrationInterface {
             CREATE TABLE IF NOT EXISTS "role" (
                 "id" uuid NOT NULL,
                 "name" text NOT NULL,
+                "description" text NULL,
                 "permissions" text NOT NULL DEFAULT '[]',
                 "scope" text NOT NULL DEFAULT 'organization',
                 "organizationId" text NULL,
