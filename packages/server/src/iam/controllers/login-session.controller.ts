@@ -1,4 +1,4 @@
-import { Request, Response } from 'express'
+import { NextFunction, Request, Response } from 'express'
 import { StatusCodes } from 'http-status-codes'
 import { InternalFlowiseError } from '../../errors/internalFlowiseError'
 import { clearAuthCookies } from '../middleware/passport/auth.cookies'
@@ -15,9 +15,9 @@ import {
 } from '../types/login-session.responses'
 
 export interface ILoginSessionController {
-    listLoginSessions(req: Request, res: Response): Promise<Response>
-    getLoginSession(req: Request, res: Response): Promise<Response>
-    revokeLoginSession(req: Request, res: Response): Promise<Response>
+    listLoginSessions(req: Request, res: Response, next: NextFunction): Promise<Response | void>
+    getLoginSession(req: Request, res: Response, next: NextFunction): Promise<Response | void>
+    revokeLoginSession(req: Request, res: Response, next: NextFunction): Promise<Response | void>
 }
 
 export class LoginSessionController implements ILoginSessionController {
@@ -27,7 +27,11 @@ export class LoginSessionController implements ILoginSessionController {
         this.sessionService = sessionService
     }
 
-    async listLoginSessions(req: Request, res: Response<LoginSessionListResponse>): Promise<Response<LoginSessionListResponse>> {
+    async listLoginSessions(
+        req: Request,
+        res: Response<LoginSessionListResponse>,
+        next: NextFunction
+    ): Promise<Response<LoginSessionListResponse> | void> {
         try {
             const query = req.query as ListLoginSessionsQuery
             const sessionUser = req.user as LoggedInUser | undefined
@@ -38,14 +42,15 @@ export class LoginSessionController implements ILoginSessionController {
             const sessions = await this.sessionService.listSessions(userId)
             return res.status(StatusCodes.OK).json({ sessions })
         } catch (error) {
-            return this.handleError(res, error)
+            next(error)
         }
     }
 
     async getLoginSession(
         req: Request,
-        res: Response<LoginSessionResponse | LoginSessionNotFoundResponse>
-    ): Promise<Response<LoginSessionResponse | LoginSessionNotFoundResponse>> {
+        res: Response<LoginSessionResponse | LoginSessionNotFoundResponse>,
+        next: NextFunction
+    ): Promise<Response<LoginSessionResponse | LoginSessionNotFoundResponse> | void> {
         try {
             const sessionId = req.params?.sessionId
             if (!sessionId) {
@@ -61,14 +66,15 @@ export class LoginSessionController implements ILoginSessionController {
             }
             return res.status(StatusCodes.OK).json({ session })
         } catch (error) {
-            return this.handleError(res, error)
+            next(error)
         }
     }
 
     async revokeLoginSession(
         req: Request,
-        res: Response<LoginSessionDeletedResponse>
-    ): Promise<Response<LoginSessionDeletedResponse>> {
+        res: Response<LoginSessionDeletedResponse>,
+        next: NextFunction
+    ): Promise<Response<LoginSessionDeletedResponse> | void> {
         try {
             const sessionId = req.params?.sessionId
             if (!sessionId) {
@@ -102,15 +108,8 @@ export class LoginSessionController implements ILoginSessionController {
             }
             return res.status(StatusCodes.OK).json({ message: 'Session revoked' })
         } catch (error) {
-            return this.handleError(res, error)
+            next(error)
         }
-    }
-
-    private handleError(res: Response, error: unknown): Response {
-        if (error instanceof InternalFlowiseError) {
-            return res.status(error.statusCode).json({ message: error.message })
-        }
-        return res.status(StatusCodes.INTERNAL_SERVER_ERROR).json({ message: 'Internal server error' })
     }
 }
 

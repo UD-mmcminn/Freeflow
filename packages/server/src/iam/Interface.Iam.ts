@@ -114,7 +114,8 @@ export interface IWorkspaceUser {
 export interface IRole {
     id: string
     name: string
-    permissions: any
+    description?: string
+    permissions: string
     scope: RoleScope
     organizationId?: string
     createdDate: Date

@@ -1,4 +1,4 @@
-import { Request, Response } from 'express'
+import { NextFunction, Request, Response } from 'express'
 import { StatusCodes } from 'http-status-codes'
 import { InternalFlowiseError } from '../../errors/internalFlowiseError'
 import AccountService from '../services/account.service'
@@ -15,14 +15,14 @@ import {
 import { AccountNotFoundResponse, AccountResponse, InviteResentResponse } from '../types/account.responses'
 
 export interface IAccountController {
-    createInvite(req: Request, res: Response): Promise<Response>
-    registerUser(req: Request, res: Response): Promise<Response>
-    acceptInvite(req: Request, res: Response): Promise<Response>
-    resendInvite(req: Request, res: Response): Promise<Response>
-    forgotPassword(req: Request, res: Response): Promise<Response>
-    resetPassword(req: Request, res: Response): Promise<Response>
-    getAccount(req: Request, res: Response): Promise<Response>
-    updateAccount(req: Request, res: Response): Promise<Response>
+    createInvite(req: Request, res: Response, next: NextFunction): Promise<Response | void>
+    registerUser(req: Request, res: Response, next: NextFunction): Promise<Response | void>
+    acceptInvite(req: Request, res: Response, next: NextFunction): Promise<Response | void>
+    resendInvite(req: Request, res: Response, next: NextFunction): Promise<Response | void>
+    forgotPassword(req: Request, res: Response, next: NextFunction): Promise<Response | void>
+    resetPassword(req: Request, res: Response, next: NextFunction): Promise<Response | void>
+    getAccount(req: Request, res: Response, next: NextFunction): Promise<Response | void>
+    updateAccount(req: Request, res: Response, next: NextFunction): Promise<Response | void>
 }
 
 export class AccountController implements IAccountController {
@@ -32,7 +32,11 @@ export class AccountController implements IAccountController {
         this.accountService = accountService
     }
 
-    async createInvite(req: Request, res: Response<AccountResponse>): Promise<Response<AccountResponse>> {
+    async createInvite(
+        req: Request,
+        res: Response<AccountResponse>,
+        next: NextFunction
+    ): Promise<Response<AccountResponse> | void> {
         try {
             const body = req.body as CreateInviteRequestBody
             const result = await this.accountService.createInvite({
@@ -53,11 +57,15 @@ export class AccountController implements IAccountController {
             })
             return res.status(StatusCodes.CREATED).json({ account: result })
         } catch (error) {
-            return this.handleError(res, error)
+            next(error)
         }
     }
 
-    async registerUser(req: Request, res: Response<AccountResponse>): Promise<Response<AccountResponse>> {
+    async registerUser(
+        req: Request,
+        res: Response<AccountResponse>,
+        next: NextFunction
+    ): Promise<Response<AccountResponse> | void> {
         try {
             const body = req.body as RegisterRequestBody
             const user = this.normalizeRegisterUser(body.user)
@@ -68,11 +76,15 @@ export class AccountController implements IAccountController {
             })
             return res.status(StatusCodes.CREATED).json({ account: result, message: 'Account registered' })
         } catch (error) {
-            return this.handleError(res, error)
+            next(error)
         }
     }
 
-    async acceptInvite(req: Request, res: Response<AccountResponse>): Promise<Response<AccountResponse>> {
+    async acceptInvite(
+        req: Request,
+        res: Response<AccountResponse>,
+        next: NextFunction
+    ): Promise<Response<AccountResponse> | void> {
         try {
             const body = req.body as AcceptInviteRequestBody
             const token = body?.token
@@ -82,11 +94,15 @@ export class AccountController implements IAccountController {
             const result = await this.accountService.acceptInvite(token, {})
             return res.status(StatusCodes.OK).json({ account: result })
         } catch (error) {
-            return this.handleError(res, error)
+            next(error)
         }
     }
 
-    async resendInvite(req: Request, res: Response<InviteResentResponse>): Promise<Response<InviteResentResponse>> {
+    async resendInvite(
+        req: Request,
+        res: Response<InviteResentResponse>,
+        next: NextFunction
+    ): Promise<Response<InviteResentResponse> | void> {
         try {
             const body = req.body as ResendInviteRequestBody
             await this.accountService.resendInvite({
@@ -95,11 +111,11 @@ export class AccountController implements IAccountController {
             })
             return res.status(StatusCodes.OK).json({ message: 'Invite resent' })
         } catch (error) {
-            return this.handleError(res, error)
+            next(error)
         }
     }
 
-    async forgotPassword(req: Request, res: Response): Promise<Response> {
+    async forgotPassword(req: Request, res: Response, next: NextFunction): Promise<Response | void> {
         try {
             const body = req.body as ForgotPasswordRequestBody
             if (!body?.user?.email) {
@@ -107,11 +123,15 @@ export class AccountController implements IAccountController {
             }
             return res.status(StatusCodes.OK).json({ message: 'If the account exists, a reset email will be sent.' })
         } catch (error) {
-            return this.handleError(res, error)
+            next(error)
         }
     }
 
-    async resetPassword(req: Request, res: Response<AccountResponse>): Promise<Response<AccountResponse>> {
+    async resetPassword(
+        req: Request,
+        res: Response<AccountResponse>,
+        next: NextFunction
+    ): Promise<Response<AccountResponse> | void> {
         try {
             const body = req.body as ResetPasswordRequestBody
             const token = body?.user?.tempToken
@@ -125,14 +145,15 @@ export class AccountController implements IAccountController {
             const result = await this.accountService.setPasswordFromInvite(token, password)
             return res.status(StatusCodes.OK).json({ account: result, message: 'Password set' })
         } catch (error) {
-            return this.handleError(res, error)
+            next(error)
         }
     }
 
     async getAccount(
         req: Request,
-        res: Response<AccountResponse | AccountNotFoundResponse>
-    ): Promise<Response<AccountResponse | AccountNotFoundResponse>> {
+        res: Response<AccountResponse | AccountNotFoundResponse>,
+        next: NextFunction
+    ): Promise<Response<AccountResponse | AccountNotFoundResponse> | void> {
         try {
             const body = req.body as GetProfileRequestBody
             const result = await this.accountService.getProfile({ user: body.user })
@@ -141,14 +162,15 @@ export class AccountController implements IAccountController {
             }
             return res.status(StatusCodes.OK).json({ account: result })
         } catch (error) {
-            return this.handleError(res, error)
+            next(error)
         }
     }
 
     async updateAccount(
         req: Request,
-        res: Response<AccountResponse | AccountNotFoundResponse>
-    ): Promise<Response<AccountResponse | AccountNotFoundResponse>> {
+        res: Response<AccountResponse | AccountNotFoundResponse>,
+        next: NextFunction
+    ): Promise<Response<AccountResponse | AccountNotFoundResponse> | void> {
         try {
             const body = req.body as UpdateProfileRequestBody
             const result = await this.accountService.updateProfile({ user: body.user })
@@ -157,15 +179,8 @@ export class AccountController implements IAccountController {
             }
             return res.status(StatusCodes.OK).json({ account: result })
         } catch (error) {
-            return this.handleError(res, error)
+            next(error)
         }
-    }
-
-    private handleError(res: Response, error: unknown): Response {
-        if (error instanceof InternalFlowiseError) {
-            return res.status(error.statusCode).json({ message: error.message })
-        }
-        return res.status(StatusCodes.INTERNAL_SERVER_ERROR).json({ message: 'Internal server error' })
     }
 
     private normalizeRegisterUser(user?: RegisterRequestBody['user']) {

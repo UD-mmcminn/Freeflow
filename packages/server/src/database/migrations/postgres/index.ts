@@ -53,6 +53,7 @@ import { AddSSOColumns1730519457880 } from '../../../iam/database/migrations/pos
 import { AddPersonalWorkspace1734074497540 } from '../../../iam/database/migrations/postgres/1734074497540-AddPersonalWorkspace'
 import { RefactorIamDatabase1737076223692 } from '../../../iam/database/migrations/postgres/1737076223692-RefactorIamDatabase'
 import { ExecutionLinkWorkspaceId1746862866554 } from '../../../iam/database/migrations/postgres/1746862866554-ExecutionLinkWorkspaceId'
+import { AddRoleDescription1747000000000 } from '../../../iam/database/migrations/postgres/1747000000000-AddRoleDescription'
 
 export const postgresMigrations = [
     Init1693891895163,
@@ -103,6 +104,7 @@ export const postgresMigrations = [
     FixOpenSourceAssistantTable1743758056188,
     AddErrorToEvaluationRun1744964560174,
     ExecutionLinkWorkspaceId1746862866554,
+    AddRoleDescription1747000000000,
     ModifyExecutionSessionIdFieldType1748450230238,
     AddTextToSpeechToChatFlow1754986480347,
     ModifyChatflowType1755066758601,

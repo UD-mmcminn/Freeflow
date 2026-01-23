@@ -1,4 +1,4 @@
-import { Request, Response } from 'express'
+import { NextFunction, Request, Response } from 'express'
 import { StatusCodes } from 'http-status-codes'
 import { In } from 'typeorm'
 import { getRunningExpressApp } from '../../utils/getRunningExpressApp'
@@ -7,11 +7,11 @@ import { WorkspaceUser } from '../database/entities/workspace-user.entity'
 import WorkspaceUserService from '../services/workspace-user.service'
 
 export interface IWorkspaceUserController {
-    listWorkspaceUsers(req: Request, res: Response): Promise<Response>
-    getWorkspaceUser(req: Request, res: Response): Promise<Response>
-    createWorkspaceUser(req: Request, res: Response): Promise<Response>
-    updateWorkspaceUser(req: Request, res: Response): Promise<Response>
-    deleteWorkspaceUser(req: Request, res: Response): Promise<Response>
+    listWorkspaceUsers(req: Request, res: Response, next: NextFunction): Promise<Response | void>
+    getWorkspaceUser(req: Request, res: Response, next: NextFunction): Promise<Response | void>
+    createWorkspaceUser(req: Request, res: Response, next: NextFunction): Promise<Response | void>
+    updateWorkspaceUser(req: Request, res: Response, next: NextFunction): Promise<Response | void>
+    deleteWorkspaceUser(req: Request, res: Response, next: NextFunction): Promise<Response | void>
 }
 
 export class WorkspaceUserController implements IWorkspaceUserController {
@@ -21,7 +21,7 @@ export class WorkspaceUserController implements IWorkspaceUserController {
         this.workspaceUserService = workspaceUserService
     }
 
-    async listWorkspaceUsers(req: Request, res: Response): Promise<Response> {
+    async listWorkspaceUsers(req: Request, res: Response, next: NextFunction): Promise<Response | void> {
         try {
             const userId = req.query?.userId as string | undefined
             const workspaceId = req.query?.workspaceId as string | undefined
@@ -48,11 +48,11 @@ export class WorkspaceUserController implements IWorkspaceUserController {
             const mapped = await this.mapWorkspaceUsers(results)
             return res.status(StatusCodes.OK).json(mapped)
         } catch (error) {
-            return this.handleError(res, error)
+            next(error)
         }
     }
 
-    async getWorkspaceUser(_req: Request, res: Response): Promise<Response> {
+    async getWorkspaceUser(_req: Request, res: Response, next: NextFunction): Promise<Response | void> {
         try {
             const workspaceUserId = (_req.params?.workspaceUserId as string | undefined) ?? (_req.query?.id as string | undefined)
             if (!workspaceUserId) {
@@ -65,31 +65,31 @@ export class WorkspaceUserController implements IWorkspaceUserController {
             const mapped = await this.mapWorkspaceUsers([workspaceUser])
             return res.status(StatusCodes.OK).json(mapped[0])
         } catch (error) {
-            return this.handleError(res, error)
+            next(error)
         }
     }
 
-    async createWorkspaceUser(_req: Request, res: Response): Promise<Response> {
+    async createWorkspaceUser(_req: Request, res: Response, next: NextFunction): Promise<Response | void> {
         try {
             const created = await this.workspaceUserService.createWorkspaceUser(_req.body ?? {})
             const mapped = await this.mapWorkspaceUsers([created])
             return res.status(StatusCodes.CREATED).json(mapped[0])
         } catch (error) {
-            return this.handleError(res, error)
+            next(error)
         }
     }
 
-    async updateWorkspaceUser(_req: Request, res: Response): Promise<Response> {
+    async updateWorkspaceUser(_req: Request, res: Response, next: NextFunction): Promise<Response | void> {
         try {
             const updated = await this.workspaceUserService.updateWorkspaceUser(_req.body?.id, _req.body ?? {})
             const mapped = await this.mapWorkspaceUsers([updated])
             return res.status(StatusCodes.OK).json(mapped[0])
         } catch (error) {
-            return this.handleError(res, error)
+            next(error)
         }
     }
 
-    async deleteWorkspaceUser(_req: Request, res: Response): Promise<Response> {
+    async deleteWorkspaceUser(_req: Request, res: Response, next: NextFunction): Promise<Response | void> {
         try {
             const workspaceUserId = _req.query?.id as string | undefined
             const workspaceId = _req.query?.workspaceId as string | undefined
@@ -97,7 +97,7 @@ export class WorkspaceUserController implements IWorkspaceUserController {
             await this.workspaceUserService.deleteWorkspaceUser(workspaceUserId, workspaceId, userId)
             return res.status(StatusCodes.OK).json({ message: 'Workspace user deleted' })
         } catch (error) {
-            return this.handleError(res, error)
+            next(error)
         }
     }
 
@@ -138,18 +138,6 @@ export class WorkspaceUserController implements IWorkspaceUserController {
         return status
     }
 
-    private handleError(res: Response, error: unknown): Response {
-        if (error instanceof Error && 'statusCode' in error) {
-            const statusCode = (error as { statusCode?: number }).statusCode
-            if (statusCode) {
-                return res.status(statusCode).json({ message: error.message })
-            }
-        }
-        if (error instanceof Error) {
-            return res.status(StatusCodes.INTERNAL_SERVER_ERROR).json({ message: error.message })
-        }
-        return res.status(StatusCodes.INTERNAL_SERVER_ERROR).json({ message: 'Internal server error' })
-    }
 }
 
 export default WorkspaceUserController
