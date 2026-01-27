@@ -10,17 +10,27 @@ import { Role } from '../database/entities/role.entity'
 import { User } from '../database/entities/user.entity'
 import { WorkspaceUser } from '../database/entities/workspace-user.entity'
 import { Workspace } from '../database/entities/workspace.entity'
+import { LoginMethod, LoginMethodStatus } from '../database/entities/login-method.entity'
 import { ILoginSessionService, LoginSessionService } from './login-session.service'
 import { INotificationService, NotificationService } from './notification.service'
 import { ILocalAuthService, LocalAuthService } from './local-auth.service'
 import { In, IsNull } from 'typeorm'
 
+export type InviteNextStep = {
+    type: 'local-auth'
+    token: string
+    expiresAt: number
+}
+
 export interface IAccountService {
     createUser(payload: AccountDescriptorInput): Promise<IAccountDescriptor>
-    registerUser(payload: AccountDescriptorInput): Promise<IAccountDescriptor>
     createInvite(payload: AccountDescriptorInput): Promise<IAccountDescriptor>
     revokeInvite(inviteId: string): Promise<void>
     acceptInvite(token: string, payload: AccountDescriptorInput): Promise<IAccountDescriptor>
+    acceptInviteWithContext(
+        token: string,
+        payload: AccountDescriptorInput
+    ): Promise<{ account: IAccountDescriptor; invite: Invite; nextSteps: InviteNextStep[] }>
     setPasswordFromInvite(token: string, password: string): Promise<IAccountDescriptor>
     resendInvite(payload: AccountDescriptorInput): Promise<void>
     getProfile(payload: AccountDescriptorInput): Promise<IAccountDescriptor | null>
@@ -44,84 +54,31 @@ export class AccountService implements IAccountService {
         this.loginSessionService = loginSessionService
     }
 
+    private async buildInviteNextSteps(manager: any, userId: string, organizationId?: string): Promise<InviteNextStep[]> {
+        const loginMethodRepository = manager.getRepository(LoginMethod)
+        const methods = await loginMethodRepository.find({
+            where: organizationId ? { organizationId } : { organizationId: null }
+        })
+        const ssoEnabled = methods.some((method: LoginMethod) => method.status === LoginMethodStatus.ENABLE)
+        if (ssoEnabled) {
+            return []
+        }
+        const resetToken = await this.localAuthService.createResetTokenWithManager(manager, userId)
+        return [
+            {
+                type: 'local-auth',
+                token: resetToken.token,
+                expiresAt: resetToken.expiresAt
+            }
+        ]
+    }
+
     async createUser(payload: AccountDescriptorInput): Promise<IAccountDescriptor> {
         const appServer = getRunningExpressApp()
 
         return appServer.AppDataSource.transaction(async (manager) => {
             return this.createUserWithManager(manager, payload)
         })
-    }
-
-    async registerUser(payload: AccountDescriptorInput): Promise<IAccountDescriptor> {
-        const email = payload.user?.email
-        if (!email) {
-            throw new InternalFlowiseError(StatusCodes.BAD_REQUEST, 'Email is required to register')
-        }
-
-        const appServer = getRunningExpressApp()
-        const organizationName = payload.organization?.name ?? email
-        const workspaceName = payload.workspaces?.[0]?.name ?? 'Default Workspace'
-
-        const result = await appServer.AppDataSource.transaction(async (manager) => {
-            const organizationRepository = manager.getRepository(Organization)
-            const workspaceRepository = manager.getRepository(Workspace)
-            const inviteRepository = manager.getRepository(Invite)
-            const userRepository = manager.getRepository(User)
-
-            const existingUser = await userRepository.findOneBy({ email })
-            if (existingUser) {
-                throw new InternalFlowiseError(StatusCodes.CONFLICT, 'User already exists')
-            }
-
-            const organization = await organizationRepository.save(
-                organizationRepository.create({
-                    name: organizationName,
-                    subscriptionId: payload.organization?.subscriptionId,
-                    customerId: payload.organization?.customerId,
-                    productId: payload.organization?.productId
-                })
-            )
-
-            const workspace = await workspaceRepository.save(
-                workspaceRepository.create({
-                    name: workspaceName,
-                    organizationId: organization.id,
-                    isPersonal: payload.workspaces?.[0]?.isPersonal ?? false
-                })
-            )
-
-            await userRepository.save(
-                userRepository.create({
-                    email,
-                    firstName: payload.user?.firstName,
-                    lastName: payload.user?.lastName,
-                    status: 'PENDING'
-                })
-            )
-
-            const invite = await inviteRepository.save(
-                inviteRepository.create(
-                    this.buildInvite({
-                        email,
-                        organizationId: organization.id,
-                        workspaceId: workspace.id,
-                        roleId: payload.organizationUsers?.[0]?.roleId ?? payload.workspaceUsers?.[0]?.roleId
-                    })
-                )
-            )
-
-            return {
-                organization,
-                workspaces: [workspace],
-                invites: [invite]
-            }
-        })
-
-        if (result.invites?.[0]) {
-            await this.notificationService.sendInvite(result.invites[0])
-        }
-
-        return result
     }
 
     async createInvite(payload: AccountDescriptorInput): Promise<IAccountDescriptor> {
@@ -184,6 +141,14 @@ export class AccountService implements IAccountService {
     }
 
     async acceptInvite(token: string, _payload: AccountDescriptorInput): Promise<IAccountDescriptor> {
+        const result = await this.acceptInviteWithContext(token, _payload)
+        return result.account
+    }
+
+    async acceptInviteWithContext(
+        token: string,
+        _payload: AccountDescriptorInput
+    ): Promise<{ account: IAccountDescriptor; invite: Invite; nextSteps: InviteNextStep[] }> {
         const appServer = getRunningExpressApp()
         return appServer.AppDataSource.transaction(async (manager) => {
             const inviteRepository = manager.getRepository(Invite)
@@ -227,6 +192,13 @@ export class AccountService implements IAccountService {
                     hasActiveOrgUser = true
                 } else if (existingOrgUser.status === 'ACTIVE') {
                     hasActiveOrgUser = true
+                } else {
+                    existingOrgUser.status = 'ACTIVE'
+                    if (!existingOrgUser.roleId && invite.roleId) {
+                        existingOrgUser.roleId = invite.roleId
+                    }
+                    await organizationUserRepository.save(existingOrgUser)
+                    hasActiveOrgUser = true
                 }
             }
 
@@ -244,6 +216,12 @@ export class AccountService implements IAccountService {
                             status: 'ACTIVE'
                         })
                     )
+                } else if (existingWorkspaceUser.status !== 'ACTIVE') {
+                    existingWorkspaceUser.status = 'ACTIVE'
+                    if (!existingWorkspaceUser.roleId && invite.roleId) {
+                        existingWorkspaceUser.roleId = invite.roleId
+                    }
+                    await workspaceUserRepository.save(existingWorkspaceUser)
                 }
             }
 
@@ -255,7 +233,9 @@ export class AccountService implements IAccountService {
             invite.acceptedAt = new Date()
             await inviteRepository.save(invite)
 
-            return this.buildProfileWithManager(manager, user)
+            const account = await this.buildProfileWithManager(manager, user)
+            const nextSteps = await this.buildInviteNextSteps(manager, user.id, invite.organizationId)
+            return { account, invite, nextSteps }
         })
     }
 

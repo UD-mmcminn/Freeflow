@@ -3,17 +3,18 @@ FROM mcr.microsoft.com/devcontainers/javascript-node:20
 # Native build deps + headless browser/canvas requirements
 RUN apt-get update \
     && DEBIAN_FRONTEND=noninteractive apt-get install -y --no-install-recommends \
-        build-essential \
-        python3 \
-        pkg-config \
-        git \
-        curl \
-        chromium \
-        libcairo2-dev \
-        libpango1.0-dev \
-        libjpeg-dev \
-        libgif-dev \
-        librsvg2-dev \
+    build-essential \
+    python3 \
+    pkg-config \
+    git \
+    curl \
+    chromium \
+    libcairo2-dev \
+    libpango1.0-dev \
+    libjpeg-dev \
+    libgif-dev \
+    librsvg2-dev \
+    sqlite3 \
     && apt-get clean \
     && rm -rf /var/lib/apt/lists/*
 

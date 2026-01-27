@@ -1,3 +1,4 @@
+import { getRunningExpressApp } from '../../utils/getRunningExpressApp'
 import { LoginMethod } from '../database/entities/login-method.entity'
 
 export interface ILoginMethodService {
@@ -11,8 +12,16 @@ export interface ILoginMethodService {
 }
 
 export class LoginMethodService implements ILoginMethodService {
-    async readLoginMethodByOrganizationId(_orgId: string | undefined, _queryRunner?: any): Promise<LoginMethod[]> {
-        return []
+    async readLoginMethodByOrganizationId(orgId: string | undefined, queryRunner?: any): Promise<LoginMethod[]> {
+        const execute = async (manager: any) => {
+            const repository = manager.getRepository(LoginMethod)
+            return repository.find({ where: orgId ? { organizationId: orgId } : { organizationId: null } })
+        }
+        if (queryRunner) {
+            return execute(queryRunner.manager)
+        }
+        const appServer = getRunningExpressApp()
+        return appServer.AppDataSource.transaction(async (manager) => execute(manager))
     }
     async decryptLoginMethodConfig(config: string) {
         return config

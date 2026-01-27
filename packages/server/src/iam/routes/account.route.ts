@@ -5,7 +5,7 @@ const router = express.Router()
 const controller = new AccountController()
 
 router.post('/invite', controller.createInvite.bind(controller))
-router.post('/register', controller.registerUser.bind(controller))
+router.get('/accept-invite', controller.acceptInvite.bind(controller))
 router.post('/accept-invite', controller.acceptInvite.bind(controller))
 router.post('/resend-invite', controller.resendInvite.bind(controller))
 router.post('/forgot-password', controller.forgotPassword.bind(controller))

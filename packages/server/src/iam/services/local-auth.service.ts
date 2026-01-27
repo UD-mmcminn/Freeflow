@@ -1,3 +1,4 @@
+import { randomUUID } from 'crypto'
 import { StatusCodes } from 'http-status-codes'
 import { InternalFlowiseError } from '../../errors/internalFlowiseError'
 import { getRunningExpressApp } from '../../utils/getRunningExpressApp'
@@ -13,6 +14,8 @@ export interface ILocalAuthService {
     verifyPassword(userId: string, password: string): Promise<boolean>
     resetPassword(token: string, newPassword: string): Promise<void>
     changePassword(userId: string, currentPassword: string, newPassword: string): Promise<void>
+    createResetToken(userId: string): Promise<{ token: string; expiresAt: number }>
+    createResetTokenWithManager(manager: any, userId: string): Promise<{ token: string; expiresAt: number }>
 }
 
 export class LocalAuthService implements ILocalAuthService {
@@ -91,6 +94,38 @@ export class LocalAuthService implements ILocalAuthService {
             throw new InternalFlowiseError(StatusCodes.UNAUTHORIZED, 'Invalid credentials')
         }
         await this.setPassword(userId, newPassword)
+    }
+
+    async createResetToken(userId: string): Promise<{ token: string; expiresAt: number }> {
+        if (!userId) {
+            throw new InternalFlowiseError(StatusCodes.BAD_REQUEST, 'User id is required')
+        }
+        const appServer = getRunningExpressApp()
+        return appServer.AppDataSource.transaction(async (manager) => {
+            return this.createResetTokenWithManager(manager, userId)
+        })
+    }
+
+    async createResetTokenWithManager(manager: any, userId: string): Promise<{ token: string; expiresAt: number }> {
+        const credentialRepository = manager.getRepository(UserCredential)
+        const token = randomUUID()
+        const expiresAt = Date.now() + 7 * 24 * 60 * 60 * 1000
+        const existing = await credentialRepository.findOneBy({ userId, provider: LOCAL_PROVIDER })
+        if (existing) {
+            existing.tempToken = token
+            existing.tokenExpiry = expiresAt
+            await credentialRepository.save(existing)
+            return { token, expiresAt }
+        }
+        await credentialRepository.save(
+            credentialRepository.create({
+                userId,
+                provider: LOCAL_PROVIDER,
+                tempToken: token,
+                tokenExpiry: expiresAt
+            })
+        )
+        return { token, expiresAt }
     }
 
     private async setPasswordWithManager(manager: any, userId: string, password: string): Promise<void> {

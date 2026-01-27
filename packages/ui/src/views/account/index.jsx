@@ -36,6 +36,7 @@ import { IconAlertCircle, IconCreditCard, IconExternalLink, IconSparkles, IconX 
 
 // API
 import authApi from '@/api/auth'
+import accountApi from '@/api/account.api'
 import pricingApi from '@/api/pricing'
 import userApi from '@/api/user'
 

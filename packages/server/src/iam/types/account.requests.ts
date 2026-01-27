@@ -17,12 +17,6 @@ export interface AcceptInviteRequestBody {
     token: string
 }
 
-export interface RegisterRequestBody {
-    user: { email: string; name?: string; firstName?: string; lastName?: string; credential?: string; tempToken?: string }
-    organization?: { name?: string }
-    workspace?: { name?: string; isPersonal?: boolean }
-}
-
 export interface GetProfileRequestBody {
     user: { id?: string; email?: string }
 }

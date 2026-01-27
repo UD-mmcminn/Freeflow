@@ -62,7 +62,7 @@ const ResetPasswordPage = () => {
     const isInviteFlow = mode === 'invite'
 
     const resetPasswordInput = {
-        label: isInviteFlow ? 'Invite Token' : 'Reset Token',
+        label: 'Token',
         name: 'resetToken',
         type: 'text'
     }
@@ -201,7 +201,7 @@ const ResetPasswordPage = () => {
                             <Box>
                                 <div style={{ display: 'flex', flexDirection: 'row' }}>
                                     <Typography>
-                                    {isInviteFlow ? 'Invite Token' : 'Reset Token'}
+                                    Token
                                     <span style={{ color: 'red' }}>&nbsp;*</span>
                                     </Typography>
                                     <div style={{ flexGrow: 1 }}></div>
@@ -209,20 +209,15 @@ const ResetPasswordPage = () => {
                                 <OutlinedInput
                                     fullWidth
                                     type='string'
-                                    placeholder={isInviteFlow ? 'Paste in the invite token.' : 'Paste in the reset token.'}
-                                    multiline={true}
-                                    rows={3}
+                                    placeholder='Paste in the token.'
                                     inputParam={resetPasswordInput}
                                     onChange={(e) => setTokenVal(e.target.value)}
                                     value={tokenVal}
+                                    inputProps={{ readOnly: Boolean(token) }}
                                     sx={{ mt: '8px' }}
                                 />
                                 <Typography variant='caption'>
-                                    <i>
-                                        {isInviteFlow
-                                            ? 'Please copy the token you received in your invite email.'
-                                            : 'Please copy the token you received in your email.'}
-                                    </i>
+                                    <i>Please copy the token you received in your email.</i>
                                 </Typography>
                             </Box>
                             <Box>

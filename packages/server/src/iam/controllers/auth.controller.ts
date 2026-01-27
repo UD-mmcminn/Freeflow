@@ -2,11 +2,14 @@ import { NextFunction, Request, Response } from 'express'
 import { StatusCodes } from 'http-status-codes'
 import { InternalFlowiseError } from '../../errors/internalFlowiseError'
 import { clearAuthCookies, setAuthCookies } from '../middleware/passport/auth.cookies'
+import { LoggedInUser } from '../Interface.Iam'
+import { WorkspaceUser } from '../database/entities/workspace-user.entity'
 import getAuthConfig from '../middleware/passport/auth.config'
 import Permissions from '../rbac/Permissions'
 import AuthService from '../services/auth.service'
+import OrganizationService from '../services/organization.service'
 import { LoginRequestBody, LogoutRequestBody, RefreshTokenRequestBody } from '../types/auth.requests'
-import { AuthPayload, LogoutResponse } from '../types/auth.responses'
+import { AuthAssignedWorkspace, AuthPayload, LogoutResponse } from '../types/auth.responses'
 import { getRunningExpressApp } from '../../utils/getRunningExpressApp'
 
 export interface IAuthController {
@@ -19,13 +22,25 @@ export interface IAuthController {
 
 export class AuthController implements IAuthController {
     private authService: AuthService
+    private organizationService: OrganizationService
 
-    constructor(authService: AuthService = new AuthService()) {
+    constructor(authService: AuthService = new AuthService(), organizationService: OrganizationService = new OrganizationService()) {
         this.authService = authService
+        this.organizationService = organizationService
     }
 
-    async resolveLogin(_req: Request, res: Response, _next: NextFunction): Promise<Response> {
-        return res.status(StatusCodes.OK).json({ redirectUrl: '/signin' })
+    async resolveLogin(_req: Request, res: Response, next: NextFunction): Promise<Response | void> {
+        try {
+            const identityManager = getRunningExpressApp()?.identityManager
+            if (!identityManager?.isIam?.()) {
+                return res.status(StatusCodes.OK).json({ redirectUrl: '/signin' })
+            }
+            const hasOrganizations = await this.organizationService.hasOrganizations()
+            const redirectUrl = hasOrganizations ? '/signin' : '/organization-setup'
+            return res.status(StatusCodes.OK).json({ redirectUrl })
+        } catch (error) {
+            next(error)
+        }
     }
 
     async login(req: Request, res: Response, next: NextFunction): Promise<Response<AuthPayload> | void> {
@@ -59,10 +74,12 @@ export class AuthController implements IAuthController {
             if (result.accessToken && result.refreshToken) {
                 setAuthCookies(res, result.accessToken, result.refreshToken)
             }
-            if (!result.payload) {
-                throw new InternalFlowiseError(StatusCodes.INTERNAL_SERVER_ERROR, 'Login payload is missing')
+            if (!result.user) {
+                throw new InternalFlowiseError(StatusCodes.INTERNAL_SERVER_ERROR, 'Login user is missing')
             }
-            return res.status(StatusCodes.OK).json(result.payload)
+            const assignedWorkspaces = this.buildAssignedWorkspaces(result.workspaceUsers ?? [])
+            const payload = this.buildAuthPayload(result.user, result.session.sessionToken, assignedWorkspaces)
+            return res.status(StatusCodes.OK).json(payload)
         } catch (error) {
             next(error)
         }
@@ -100,10 +117,12 @@ export class AuthController implements IAuthController {
             if (result.accessToken && result.refreshToken) {
                 setAuthCookies(res, result.accessToken, result.refreshToken)
             }
-            if (!result.payload) {
-                throw new InternalFlowiseError(StatusCodes.INTERNAL_SERVER_ERROR, 'Refresh payload is missing')
+            if (!result.user) {
+                throw new InternalFlowiseError(StatusCodes.INTERNAL_SERVER_ERROR, 'Refresh user is missing')
             }
-            return res.status(StatusCodes.OK).json(result.payload)
+            const assignedWorkspaces = this.buildAssignedWorkspaces(result.workspaceUsers ?? [])
+            const payload = this.buildAuthPayload(result.user, result.session.sessionToken, assignedWorkspaces)
+            return res.status(StatusCodes.OK).json(payload)
         } catch (error) {
             next(error)
         }
@@ -119,6 +138,46 @@ export class AuthController implements IAuthController {
             return res.status(StatusCodes.OK).json(permissions)
         } catch (error) {
             next(error)
+        }
+    }
+
+    private buildAssignedWorkspaces(workspaceUsers: WorkspaceUser[]): AuthAssignedWorkspace[] {
+        return workspaceUsers
+            .filter((entry) => entry.status !== 'DISABLED')
+            .map((entry) => ({
+                id: entry.workspaceId,
+                name: entry.workspace?.name ?? '',
+                role: entry.role?.name,
+                organizationId: entry.workspace?.organizationId
+            }))
+    }
+
+    private buildAuthPayload(
+        user: LoggedInUser,
+        sessionToken: string,
+        assignedWorkspaces: AuthAssignedWorkspace[]
+    ): AuthPayload {
+        const email = user.email ?? ''
+        const fullName = [user.firstName, user.lastName].filter(Boolean).join(' ').trim()
+        return {
+            id: user.id,
+            email,
+            name: fullName || email,
+            status: 'ACTIVE',
+            role: user.activeWorkspaceRole ?? null,
+            isSSO: user.authStrategy ? user.authStrategy !== 'local' : false,
+            activeOrganizationId: user.activeOrganizationId ?? '',
+            activeOrganizationSubscriptionId: user.activeOrganizationSubscriptionId,
+            activeOrganizationCustomerId: user.activeOrganizationCustomerId,
+            activeOrganizationProductId: user.activeOrganizationProductId,
+            activeWorkspaceId: user.activeWorkspaceId ?? '',
+            activeWorkspace: user.activeWorkspace,
+            lastLogin: null,
+            isOrganizationAdmin: user.isOrganizationAdmin ?? false,
+            assignedWorkspaces,
+            permissions: user.permissions ?? [],
+            features: user.features ?? {},
+            token: sessionToken
         }
     }
 }

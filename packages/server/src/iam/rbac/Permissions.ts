@@ -1,4 +1,4 @@
-type PermissionDefinition = {
+export type PermissionDefinition = {
     key: string
     value: string
     isOpenSource: boolean
@@ -6,7 +6,7 @@ type PermissionDefinition = {
     isCloud: boolean
 }
 
-const PERMISSION_KEYS = [
+export const PERMISSION_KEYS = [
     'agentflows:create',
     'agentflows:delete',
     'agentflows:update',
