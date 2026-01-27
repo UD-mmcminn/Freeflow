@@ -53,8 +53,8 @@ export class OrganizationController implements IOrganizationController {
 
     async createOrganization(req: Request, res: Response, next: NextFunction): Promise<Response | void> {
         try {
-            const organization = await this.organizationService.createOrganization(req.body)
-            return res.status(StatusCodes.CREATED).json({ organization })
+            const result = await this.organizationService.createOrganization(req.body)
+            return res.status(StatusCodes.CREATED).json({ organization: result.organization })
         } catch (error) {
             next(error)
         }

@@ -142,10 +142,8 @@ export class WorkspaceController implements IWorkspaceController {
                 const organization = await organizationRepository.findOneBy({ id: workspace.organizationId })
 
                 const identityManager = appServer.identityManager
-                const features =
-                    identityManager && organization?.subscriptionId
-                        ? await identityManager.getFeaturesByPlan(organization.subscriptionId)
-                        : {}
+                const subscriptionId = organization?.subscriptionId ?? ''
+                const features = identityManager ? await identityManager.getFeaturesByPlan(subscriptionId) : {}
                 const permissions = this.parsePermissions(workspaceUser.role?.permissions)
                 const roles = workspaceUser.role?.name ? [workspaceUser.role.name] : []
 

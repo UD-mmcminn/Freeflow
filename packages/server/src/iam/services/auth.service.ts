@@ -2,22 +2,27 @@ import { randomUUID } from 'crypto'
 import { StatusCodes } from 'http-status-codes'
 import { InternalFlowiseError } from '../../errors/internalFlowiseError'
 import { getRunningExpressApp } from '../../utils/getRunningExpressApp'
-import { LoggedInUser } from '../Interface.Iam'
+import { ILoginSession, LoggedInUser } from '../Interface.Iam'
 import { Organization } from '../database/entities/organization.entity'
 import { OrganizationUser } from '../database/entities/organization-user.entity'
 import { User } from '../database/entities/user.entity'
 import { WorkspaceUser } from '../database/entities/workspace-user.entity'
 import { signAccessToken, signRefreshToken, verifyRefreshToken } from '../middleware/passport/auth.tokens'
-import { AuthAssignedWorkspace, AuthPayload, LoginResponse, RefreshTokenResponse } from '../types/auth.responses'
 import { ILoginSessionService, LoginSessionService } from './login-session.service'
 import { ILocalAuthService, LocalAuthService } from './local-auth.service'
 
+type AuthSessionResult = {
+    session: ILoginSession
+    user: LoggedInUser
+    accessToken?: string
+    refreshToken?: string
+    workspaceUsers: WorkspaceUser[]
+}
+
 export interface IAuthService {
-    login(
-        payload: { userId?: string; email?: string; password?: string }
-    ): Promise<LoginResponse & { user?: LoggedInUser; payload?: AuthPayload }>
+    login(payload: { userId?: string; email?: string; password?: string }): Promise<AuthSessionResult>
     logout(sessionToken: string): Promise<void>
-    refreshToken(refreshToken: string): Promise<RefreshTokenResponse & { user?: LoggedInUser; payload?: AuthPayload }>
+    refreshToken(refreshToken: string): Promise<AuthSessionResult>
     startSsoLogin(provider: string): Promise<any>
     handleSsoCallback(provider: string, payload: any): Promise<any>
     logoutSso(sessionToken: string): Promise<void>
@@ -35,9 +40,11 @@ export class AuthService implements IAuthService {
         this.loginSessionService = loginSessionService
     }
 
-    async login(
-        payload: { userId?: string; email?: string; password?: string }
-    ): Promise<LoginResponse & { user?: LoggedInUser; payload?: AuthPayload }> {
+    async login(payload: {
+        userId?: string
+        email?: string
+        password?: string
+    }): Promise<AuthSessionResult> {
         if (!payload.userId && !payload.email) {
             throw new InternalFlowiseError(StatusCodes.BAD_REQUEST, 'Email is required')
         }
@@ -82,15 +89,12 @@ export class AuthService implements IAuthService {
                 },
                 manager
             )
-            const assignedWorkspaces = this.buildAssignedWorkspaces(workspaceUsers)
-            const payload = this.buildAuthPayload(user, loggedInUser, assignedWorkspaces, session.sessionToken)
-
             return {
                 session,
                 user: loggedInUser,
                 accessToken,
                 refreshToken,
-                payload
+                workspaceUsers
             }
         })
     }
@@ -105,7 +109,7 @@ export class AuthService implements IAuthService {
         })
     }
 
-    async refreshToken(refreshToken: string): Promise<RefreshTokenResponse & { user?: LoggedInUser; payload?: AuthPayload }> {
+    async refreshToken(refreshToken: string): Promise<AuthSessionResult> {
         if (!refreshToken) {
             throw new InternalFlowiseError(StatusCodes.BAD_REQUEST, 'Refresh token is required')
         }
@@ -149,14 +153,12 @@ export class AuthService implements IAuthService {
                 },
                 manager
             )
-            const assignedWorkspaces = this.buildAssignedWorkspaces(workspaceUsers)
-            const payload = this.buildAuthPayload(user, loggedInUser, assignedWorkspaces, updated.sessionToken)
             return {
                 session: updated,
                 user: loggedInUser,
                 accessToken,
                 refreshToken: nextRefreshToken,
-                payload
+                workspaceUsers
             }
         })
     }
@@ -205,10 +207,8 @@ export class AuthService implements IAuthService {
             workspaceUsers[0]
 
         const identityManager = getRunningExpressApp().identityManager
-        const features =
-            identityManager && organization?.subscriptionId
-                ? await identityManager.getFeaturesByPlan(organization.subscriptionId)
-                : {}
+        const subscriptionId = organization?.subscriptionId ?? ''
+        const features = identityManager ? await identityManager.getFeaturesByPlan(subscriptionId) : {}
 
         const permissions = this.parsePermissions(preferredWorkspace?.role?.permissions)
         const roles = preferredWorkspace?.role?.name ? [preferredWorkspace.role.name] : []
@@ -233,46 +233,6 @@ export class AuthService implements IAuthService {
         }
 
         return { loggedInUser, workspaceUsers }
-    }
-
-    private buildAssignedWorkspaces(workspaceUsers: WorkspaceUser[]): AuthAssignedWorkspace[] {
-        return workspaceUsers
-            .filter((entry) => entry.status !== 'DISABLED')
-            .map((entry) => ({
-                id: entry.workspaceId,
-                name: entry.workspace?.name ?? '',
-                role: entry.role?.name,
-                organizationId: entry.workspace?.organizationId
-            }))
-    }
-
-    private buildAuthPayload(
-        user: User,
-        loggedInUser: LoggedInUser,
-        assignedWorkspaces: AuthAssignedWorkspace[],
-        sessionToken: string
-    ): AuthPayload {
-        const fullName = [loggedInUser.firstName, loggedInUser.lastName].filter(Boolean).join(' ').trim()
-        return {
-            id: user.id,
-            email: user.email,
-            name: fullName || user.email,
-            status: 'ACTIVE',
-            role: loggedInUser.activeWorkspaceRole ?? null,
-            isSSO: loggedInUser.authStrategy ? loggedInUser.authStrategy !== 'local' : false,
-            activeOrganizationId: loggedInUser.activeOrganizationId,
-            activeOrganizationSubscriptionId: loggedInUser.activeOrganizationSubscriptionId,
-            activeOrganizationCustomerId: loggedInUser.activeOrganizationCustomerId,
-            activeOrganizationProductId: loggedInUser.activeOrganizationProductId,
-            activeWorkspaceId: loggedInUser.activeWorkspaceId,
-            activeWorkspace: loggedInUser.activeWorkspace,
-            lastLogin: null,
-            isOrganizationAdmin: loggedInUser.isOrganizationAdmin ?? false,
-            assignedWorkspaces,
-            permissions: loggedInUser.permissions ?? [],
-            features: loggedInUser.features ?? {},
-            token: sessionToken
-        }
     }
 
     private parsePermissions(raw: string | undefined): string[] {

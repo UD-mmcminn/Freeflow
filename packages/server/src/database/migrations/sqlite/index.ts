@@ -51,6 +51,7 @@ import { AddSSOColumns1730519457880 } from '../../../iam/database/migrations/sql
 import { AddPersonalWorkspace1734074497540 } from '../../../iam/database/migrations/sqlite/1734074497540-AddPersonalWorkspace'
 import { RefactorIamDatabase1737076223692 } from '../../../iam/database/migrations/sqlite/1737076223692-RefactorIamDatabase'
 import { ExecutionLinkWorkspaceId1746862866554 } from '../../../iam/database/migrations/sqlite/1746862866554-ExecutionLinkWorkspaceId'
+import { RebuildWorkspaceIdFks1766000000000 } from '../../../iam/database/migrations/sqlite/1766000000000-RebuildWorkspaceIdFks'
 import { AddRoleDescription1747000000000 } from '../../../iam/database/migrations/sqlite/1747000000000-AddRoleDescription'
 
 export const sqliteMigrations = [
@@ -101,6 +102,7 @@ export const sqliteMigrations = [
     FixOpenSourceAssistantTable1743758056188,
     AddErrorToEvaluationRun1744964560174,
     ExecutionLinkWorkspaceId1746862866554,
+    RebuildWorkspaceIdFks1766000000000,
     AddRoleDescription1747000000000,
     AddTextToSpeechToChatFlow1754986486669,
     ModifyChatflowType1755066758601,

@@ -216,8 +216,8 @@ const SignInPage = () => {
                         {isCloud && (
                             <Typography variant='body2' sx={{ color: theme.palette.grey[600] }}>
                                 Need access?{' '}
-                                <Link style={{ color: `${theme.palette.primary.main}` }} to='/register'>
-                                    Request an invite
+                                <Link style={{ color: `${theme.palette.primary.main}` }} to='/organization-setup'>
+                                    Register
                                 </Link>
                                 .
                             </Typography>
@@ -225,8 +225,8 @@ const SignInPage = () => {
                         {isIam && (
                             <Typography variant='body2' sx={{ color: theme.palette.grey[600] }}>
                                 Need access?{' '}
-                                <Link style={{ color: `${theme.palette.primary.main}` }} to='/register'>
-                                    Request an invite
+                                <Link style={{ color: `${theme.palette.primary.main}` }} to='/organization-setup'>
+                                    Register
                                 </Link>
                                 .
                             </Typography>

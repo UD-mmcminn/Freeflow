@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { z } from 'zod'
+import { useSelector } from 'react-redux'
 
 // material-ui
 import { Alert, Box, Button, Chip, Divider, Icon, List, ListItemText, Stack, TextField, Typography } from '@mui/material'
@@ -12,6 +13,7 @@ import { BackdropLoader } from '@/ui-component/loading/BackdropLoader'
 
 // API
 import accountApi from '@/api/account.api'
+import organizationApi from '@/api/organization'
 import loginMethodApi from '@/api/loginmethod'
 
 // Hooks
@@ -30,15 +32,29 @@ import { IconCircleCheck, IconExclamationCircle } from '@tabler/icons-react'
 // ==============================|| Organization & Admin User Setup ||============================== //
 
 // IMPORTANT: when updating this schema, update the schema on the server as well
-// packages/server/src/iam/Interface.Iam.ts
-const OrgSetupSchema = z.object({
+// packages/server/src/iam/types/organization.requests.ts
+const OrgSetupNewUserSchema = z.object({
+    organizationName: z.string().min(1, 'Organization name is required'),
     username: z.string().min(1, 'Name is required'),
     email: z.string().min(1, 'Email is required').email('Invalid email address')
+})
+
+const OrgSetupExistingUserSchema = z.object({
+    organizationName: z.string().min(1, 'Organization name is required')
 })
 
 const OrganizationSetupPage = () => {
     useNotifier()
     const { isIam, isOpenSource } = useConfig()
+    const currentUser = useSelector((state) => state.auth.user)
+    const isLoggedIn = Boolean(currentUser?.id)
+
+    const organizationNameInput = {
+        label: 'Organization Name',
+        name: 'organizationName',
+        type: 'text',
+        placeholder: 'Acme Inc.'
+    }
 
     const usernameInput = {
         label: 'Username',
@@ -54,6 +70,7 @@ const OrganizationSetupPage = () => {
         placeholder: 'user@company.com'
     }
 
+    const [organizationName, setOrganizationName] = useState('')
     const [email, setEmail] = useState('')
     const [username, setUsername] = useState('')
     const [existingUsername, setExistingUsername] = useState('')
@@ -64,7 +81,7 @@ const OrganizationSetupPage = () => {
     const [successMsg, setSuccessMsg] = useState(undefined)
     const [requiresAuthentication, setRequiresAuthentication] = useState(false)
 
-    const registerAccountApi = useApi(accountApi.registerAccount)
+    const setupOrganizationApi = useApi(organizationApi.setupOrganization)
     const getBasicAuthApi = useApi(accountApi.getBasicAuth)
     const navigate = useNavigate()
 
@@ -73,67 +90,73 @@ const OrganizationSetupPage = () => {
 
     const register = async (event) => {
         event.preventDefault()
-        const result = OrgSetupSchema.safeParse({
+        const normalizedOrganizationName = organizationName.trim()
+        const validationResult = (isLoggedIn ? OrgSetupExistingUserSchema : OrgSetupNewUserSchema).safeParse({
+            organizationName: normalizedOrganizationName,
             username,
             email
         })
-        if (result.success) {
-            setLoading(true)
-            setAuthError('')
+        if (!validationResult.success) {
+            const errorMessages = validationResult.error.errors.map((error) => error.message)
+            setAuthError(errorMessages.join(', '))
+            return
+        }
 
-            // Check authentication first if required
-            if (requiresAuthentication) {
-                try {
-                    const authResult = await accountApi.checkBasicAuth({
-                        username: existingUsername,
-                        password: existingPassword
-                    })
+        setLoading(true)
+        setAuthError('')
 
-                    if (!authResult || !authResult.data || authResult.data.message !== 'Authentication successful') {
-                        setAuthError('Authentication failed. Please check your existing credentials.')
-                        setLoading(false)
-                        return
-                    }
-                } catch (error) {
+        // Check authentication first if required
+        if (requiresAuthentication) {
+            try {
+                const authResult = await accountApi.checkBasicAuth({
+                    username: existingUsername,
+                    password: existingPassword
+                })
+
+                if (!authResult || !authResult.data || authResult.data.message !== 'Authentication successful') {
                     setAuthError('Authentication failed. Please check your existing credentials.')
                     setLoading(false)
                     return
                 }
+            } catch (error) {
+                setAuthError('Authentication failed. Please check your existing credentials.')
+                setLoading(false)
+                return
             }
-
-            // Proceed with registration after successful authentication
-            const body = {
-                user: {
-                    name: username,
-                    email: email,
-                    type: 'pro'
-                }
-            }
-            await registerAccountApi.request(body)
-        } else {
-            // Handle validation errors
-            const errorMessages = result.error.errors.map((error) => error.message)
-            setAuthError(errorMessages.join(', '))
         }
+
+        const body = {
+            organization: {
+                name: normalizedOrganizationName
+            },
+            user: isLoggedIn
+                ? undefined
+                : {
+                      name: username,
+                      email: email
+                  }
+        }
+
+        await setupOrganizationApi.request(body)
     }
 
     useEffect(() => {
-        if (registerAccountApi.error) {
-            const errMessage =
-                typeof registerAccountApi.error.response.data === 'object'
-                    ? registerAccountApi.error.response.data.message
-                    : registerAccountApi.error.response.data
+        if (setupOrganizationApi.error) {
+            const response = setupOrganizationApi.error.response
+            const errMessage = typeof response?.data === 'object' ? response?.data?.message : response?.data
             let finalErrMessage = ''
-            if (isIam) {
-                finalErrMessage = `Error sending admin invite. Please contact your administrator. (${errMessage})`
+            if (response?.status === 409) {
+                finalErrMessage = errMessage || 'Organization name already exists.'
+            } else if (isIam) {
+                finalErrMessage = `Error creating organization. ${errMessage || ''}`.trim()
             } else {
-                finalErrMessage = `Error sending invite: ${errMessage}`
+                finalErrMessage = `Error creating organization: ${errMessage || 'Unknown error'}`
             }
             setAuthError(finalErrMessage)
             setLoading(false)
         }
         // eslint-disable-next-line react-hooks/exhaustive-deps
-    }, [registerAccountApi.error])
+    }, [setupOrganizationApi.error])
 
     useEffect(() => {
         if (getBasicAuthApi.data && getBasicAuthApi.data.isUsernamePasswordSet === true) {
@@ -157,17 +180,23 @@ const OrganizationSetupPage = () => {
     }, [getDefaultProvidersApi.data])
 
     useEffect(() => {
-        if (registerAccountApi.data) {
+        if (setupOrganizationApi.data) {
+            setLoading(false)
             setAuthError(undefined)
+            setOrganizationName('')
             setUsername('')
             setEmail('')
-            setSuccessMsg('Invite sent. Please check your email to continue setup.')
+            setSuccessMsg(
+                isLoggedIn
+                    ? 'Organization created successfully.'
+                    : 'Invite sent. Please check your email to continue setup.'
+            )
             setTimeout(() => {
-                navigate('/signin')
+                navigate(isLoggedIn ? '/' : '/signin')
             }, 3000)
         }
         // eslint-disable-next-line react-hooks/exhaustive-deps
-    }, [registerAccountApi.data])
+    }, [setupOrganizationApi.data])
 
     const signInWithSSO = (ssoProvider) => {
         window.location.href = `/api/v1/${ssoProvider}/login`
@@ -206,7 +235,7 @@ const OrganizationSetupPage = () => {
                         </Alert>
                     )}
                     <Stack sx={{ gap: 1 }}>
-                        <Typography variant='h1'>Request Admin Invite</Typography>
+                        <Typography variant='h1'>Create Organization</Typography>
                     </Stack>
                     {requiresAuthentication && (
                         <Alert severity='info'>
@@ -262,56 +291,83 @@ const OrganizationSetupPage = () => {
                                     </Divider>
                                 </>
                             )}
-                            {isIam && (
-                                <Box>
-                                    <Divider>
-                                        <Chip label='Account Administrator' size='small' />
-                                    </Divider>
-                                </Box>
+                            <Box>
+                                <div style={{ display: 'flex', flexDirection: 'row' }}>
+                                    <Typography>
+                                        Organization Name<span style={{ color: 'red' }}>&nbsp;*</span>
+                                    </Typography>
+                                    <div style={{ flexGrow: 1 }}></div>
+                                </div>
+                                <Input
+                                    inputParam={organizationNameInput}
+                                    placeholder='Organization Name'
+                                    onChange={(newValue) => setOrganizationName(newValue)}
+                                    value={organizationName}
+                                    showDialog={false}
+                                />
+                                <Typography variant='caption'>
+                                    <i>Must be unique and is used for display purposes only.</i>
+                                </Typography>
+                            </Box>
+                            {!isLoggedIn && (
+                                <>
+                                    {isIam && (
+                                        <Box>
+                                            <Divider>
+                                                <Chip label='Account Administrator' size='small' />
+                                            </Divider>
+                                        </Box>
+                                    )}
+                                    <Box>
+                                        <div style={{ display: 'flex', flexDirection: 'row' }}>
+                                            <Typography>
+                                                Administrator Name<span style={{ color: 'red' }}>&nbsp;*</span>
+                                            </Typography>
+                                            <div style={{ flexGrow: 1 }}></div>
+                                        </div>
+                                        <Input
+                                            inputParam={usernameInput}
+                                            placeholder='Display Name'
+                                            onChange={(newValue) => setUsername(newValue)}
+                                            value={username}
+                                            showDialog={false}
+                                        />
+                                        <Typography variant='caption'>
+                                            <i>Is used for display purposes only.</i>
+                                        </Typography>
+                                    </Box>
+                                    <Box>
+                                        <div style={{ display: 'flex', flexDirection: 'row' }}>
+                                            <Typography>
+                                                Administrator Email<span style={{ color: 'red' }}>&nbsp;*</span>
+                                            </Typography>
+                                            <div style={{ flexGrow: 1 }}></div>
+                                        </div>
+                                        <Input
+                                            inputParam={emailInput}
+                                            onChange={(newValue) => setEmail(newValue)}
+                                            type='email'
+                                            value={email}
+                                            showDialog={false}
+                                        />
+                                        <Typography variant='caption'>
+                                            <i>We will send an invite link to this email to complete setup.</i>
+                                        </Typography>
+                                    </Box>
+                                </>
                             )}
-                            <Box>
-                                <div style={{ display: 'flex', flexDirection: 'row' }}>
-                                    <Typography>
-                                        Administrator Name<span style={{ color: 'red' }}>&nbsp;*</span>
-                                    </Typography>
-                                    <div style={{ flexGrow: 1 }}></div>
-                                </div>
-                                <Input
-                                    inputParam={usernameInput}
-                                    placeholder='Display Name'
-                                    onChange={(newValue) => setUsername(newValue)}
-                                    value={username}
-                                    showDialog={false}
-                                />
+                            {isLoggedIn && currentUser?.email && (
                                 <Typography variant='caption'>
-                                    <i>Is used for display purposes only.</i>
+                                    <i>Creating organization as {currentUser.email}.</i>
                                 </Typography>
-                            </Box>
-                            <Box>
-                                <div style={{ display: 'flex', flexDirection: 'row' }}>
-                                    <Typography>
-                                        Administrator Email<span style={{ color: 'red' }}>&nbsp;*</span>
-                                    </Typography>
-                                    <div style={{ flexGrow: 1 }}></div>
-                                </div>
-                                <Input
-                                    inputParam={emailInput}
-                                    onChange={(newValue) => setEmail(newValue)}
-                                    type='email'
-                                    value={email}
-                                    showDialog={false}
-                                />
-                                <Typography variant='caption'>
-                                    <i>We will send an invite link to this email to complete setup.</i>
-                                </Typography>
-                            </Box>
+                            )}
                             <StyledButton
                                 variant='contained'
                                 style={{ borderRadius: 12, height: 40, marginRight: 5 }}
                                 type='submit'
                                 disabled={requiresAuthentication && (!existingUsername || !existingPassword)}
                             >
-                                Send Invite
+                                {isLoggedIn ? 'Create Organization' : 'Send Invite'}
                             </StyledButton>
                             {configuredSsoProviders && configuredSsoProviders.length > 0 && <Divider sx={{ width: '100%' }}>OR</Divider>}
                             {configuredSsoProviders &&

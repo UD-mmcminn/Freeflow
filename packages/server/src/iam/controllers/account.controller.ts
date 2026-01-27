@@ -7,16 +7,14 @@ import {
     CreateInviteRequestBody,
     ForgotPasswordRequestBody,
     GetProfileRequestBody,
-    RegisterRequestBody,
     ResetPasswordRequestBody,
     ResendInviteRequestBody,
     UpdateProfileRequestBody
 } from '../types/account.requests'
-import { AccountNotFoundResponse, AccountResponse, InviteResentResponse } from '../types/account.responses'
+import { AccountNotFoundResponse, AccountResponse, AcceptInviteResponse, InviteResentResponse } from '../types/account.responses'
 
 export interface IAccountController {
     createInvite(req: Request, res: Response, next: NextFunction): Promise<Response | void>
-    registerUser(req: Request, res: Response, next: NextFunction): Promise<Response | void>
     acceptInvite(req: Request, res: Response, next: NextFunction): Promise<Response | void>
     resendInvite(req: Request, res: Response, next: NextFunction): Promise<Response | void>
     forgotPassword(req: Request, res: Response, next: NextFunction): Promise<Response | void>
@@ -61,38 +59,23 @@ export class AccountController implements IAccountController {
         }
     }
 
-    async registerUser(
-        req: Request,
-        res: Response<AccountResponse>,
-        next: NextFunction
-    ): Promise<Response<AccountResponse> | void> {
-        try {
-            const body = req.body as RegisterRequestBody
-            const user = this.normalizeRegisterUser(body.user)
-            const result = await this.accountService.registerUser({
-                user,
-                organization: body.organization,
-                workspaces: body.workspace ? [body.workspace] : undefined
-            })
-            return res.status(StatusCodes.CREATED).json({ account: result, message: 'Account registered' })
-        } catch (error) {
-            next(error)
-        }
-    }
-
     async acceptInvite(
         req: Request,
-        res: Response<AccountResponse>,
+        res: Response<AcceptInviteResponse>,
         next: NextFunction
-    ): Promise<Response<AccountResponse> | void> {
+    ): Promise<Response<AcceptInviteResponse> | void> {
         try {
             const body = req.body as AcceptInviteRequestBody
-            const token = body?.token
+            const token = (req.method === 'GET' ? (req.query?.token as string | undefined) : body?.token) ?? undefined
             if (!token) {
                 throw new InternalFlowiseError(StatusCodes.BAD_REQUEST, 'Invite token is required')
             }
-            const result = await this.accountService.acceptInvite(token, {})
-            return res.status(StatusCodes.OK).json({ account: result })
+            const result = await this.accountService.acceptInviteWithContext(token, {})
+            return res.status(StatusCodes.OK).json({
+                account: result.account,
+                status: 'accepted',
+                nextSteps: result.nextSteps
+            })
         } catch (error) {
             next(error)
         }
@@ -180,25 +163,6 @@ export class AccountController implements IAccountController {
             return res.status(StatusCodes.OK).json({ account: result })
         } catch (error) {
             next(error)
-        }
-    }
-
-    private normalizeRegisterUser(user?: RegisterRequestBody['user']) {
-        if (!user) {
-            return {}
-        }
-        if (user.firstName || user.lastName) {
-            return user
-        }
-        const name = user.name?.trim()
-        if (!name) {
-            return user
-        }
-        const parts = name.split(/\s+/)
-        return {
-            ...user,
-            firstName: parts[0],
-            lastName: parts.slice(1).join(' ') || undefined
         }
     }
 }
