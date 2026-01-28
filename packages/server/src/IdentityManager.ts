@@ -1,4 +1,18 @@
-import express from 'express'
+/*
+ * Copyright (c) 2026 Union Dynamic, Inc
+ *
+ * This source code is licensed under the "IAM Module License" (AGPLv3 + AI Clause).
+ * You may not use this file except in compliance with the License.
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ *
+ * See the LICENSE file in this directory for the full license text and
+ * restrictions regarding Artificial Intelligence training.
+ */
+
+import express, { Request } from 'express'
 import { StatusCodes } from 'http-status-codes'
 import { LoginMethodStatus } from './iam/database/entities/login-method.entity'
 import { ErrorMessage } from './iam/Interface.Iam'
@@ -14,6 +28,7 @@ import { Platform } from './Interface'
 import { StripeManager } from './StripeManager'
 import { IAM_FEATURE_FLAGS } from './utils/quotaUsage'
 import { getRunningExpressApp } from './utils/getRunningExpressApp'
+import { UsageCacheManager } from './UsageCacheManager'
 
 const ALL_SSO_PROVIDERS = ['azure', 'google', 'auth0', 'github']
 
@@ -94,6 +109,75 @@ export class IdentityManager {
             return {}
         }
         return this.stripeManager.getFeaturesByPlan(subscriptionId)
+    }
+
+    public async createStripeCustomerPortalSession(req: Request): Promise<{ url: string }> {
+        if (!this.stripeManager) {
+            throw new Error('Stripe is not initialized')
+        }
+        return this.stripeManager.createStripeCustomerPortalSession(req)
+    }
+
+    public async createStripeUserAndSubscribe(email: string, planId: string, referral?: string) {
+        if (!this.stripeManager) {
+            throw new Error('Stripe is not initialized')
+        }
+        const result = await this.stripeManager.createStripeUserAndSubscribe(email, planId, referral)
+        await this.refreshSubscriptionCache(result.subscriptionId)
+        return result
+    }
+
+    public async updateSubscriptionPlan(req: Request, subscriptionId: string, newPlanId: string, prorationDate: number) {
+        if (!this.stripeManager) {
+            throw new Error('Stripe is not initialized')
+        }
+        const result = await this.stripeManager.updateSubscriptionPlan(subscriptionId, newPlanId, prorationDate)
+        await this.refreshSubscriptionCache(subscriptionId)
+        const productId = await this.stripeManager.getProductIdFromSubscription(subscriptionId, true)
+        const features = await this.getFeaturesByPlan(subscriptionId)
+        this.updateSessionUser(req, {
+            activeOrganizationProductId: productId,
+            features
+        })
+        return result
+    }
+
+    public async updateAdditionalSeats(subscriptionId: string, quantity: number, prorationDate: number) {
+        if (!this.stripeManager) {
+            throw new Error('Stripe is not initialized')
+        }
+        const result = await this.stripeManager.updateAdditionalSeats(subscriptionId, quantity, prorationDate)
+        await this.refreshSubscriptionCache(subscriptionId)
+        return result
+    }
+
+    public async getRefreshToken(providerName: string, refreshToken: string) {
+        const provider = this.ssoProviders.get(providerName)
+        if (!provider) {
+            return null
+        }
+        return provider.refreshToken(refreshToken)
+    }
+
+    private async refreshSubscriptionCache(subscriptionId: string): Promise<void> {
+        if (!subscriptionId || !this.stripeManager || this.currentInstancePlatform !== Platform.CLOUD) {
+            return
+        }
+        const cacheManager = await UsageCacheManager.getInstance()
+        await cacheManager.getQuotas(subscriptionId, true)
+        await this.stripeManager.getFeaturesByPlan(subscriptionId, true)
+        await this.stripeManager.getProductIdFromSubscription(subscriptionId, true)
+    }
+
+    private updateSessionUser(req: Request, updates: Partial<Record<string, any>>): void {
+        if (!req?.user) return
+        const updatedUser = { ...req.user, ...updates }
+        if (req.session) {
+            const session = req.session as any
+            session.passport = session.passport ?? {}
+            session.passport.user = updatedUser
+        }
+        req.user = updatedUser as any
     }
 
     public async initializeSSO(app: express.Application): Promise<void> {
@@ -186,13 +270,15 @@ export class IdentityManager {
                     next()
                     return
                 }
-                const featureFlags =
-                    req.user?.features ?? (await identityManager.getFeaturesByPlan(req.user?.activeOrganizationSubscriptionId ?? ''))
+                const subscriptionId = req.user?.activeOrganizationSubscriptionId ?? ''
+                const featureFlags = req.user?.features ?? (await identityManager.getFeaturesByPlan(subscriptionId))
                 if (!featureFlags || Object.keys(featureFlags).length === 0) {
-                    next()
+                    res.status(StatusCodes.FORBIDDEN).json({ message: ErrorMessage.FORBIDDEN })
                     return
                 }
-                if (featureFlags[featureKey] === 'false') {
+                const flagValue = featureFlags[featureKey]
+                const isEnabled = flagValue === true || flagValue === 'true' || flagValue === '1'
+                if (!isEnabled) {
                     res.status(StatusCodes.FORBIDDEN).json({ message: ErrorMessage.FORBIDDEN })
                     return
                 }
