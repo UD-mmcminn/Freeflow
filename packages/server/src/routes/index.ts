@@ -68,6 +68,7 @@ import accountRouter from '../iam/routes/account.route'
 import loginMethodRouter from '../iam/routes/login-method.route'
 import loginSessionRouter from '../iam/routes/login-session.route'
 import localAuthRouter from '../iam/routes/local-auth.route'
+import billingRouter from '../iam/routes/billing.route'
 import { IdentityManager } from '../IdentityManager'
 
 const router = express.Router()
@@ -139,6 +140,7 @@ router.use('/account', accountRouter)
 router.use('/loginmethod', loginMethodRouter)
 router.use('/login-session', loginSessionRouter)
 router.use('/local-auth', localAuthRouter)
+router.use('/billing', billingRouter)
 router.use('/logs', IdentityManager.checkFeatureByPlan('feat:logs'), logsRouter)
 router.use('/files', IdentityManager.checkFeatureByPlan('feat:files'), filesRouter)
 
