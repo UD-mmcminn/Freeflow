@@ -64,13 +64,7 @@ export default class user extends BaseCommand {
         if (!user) throw new Error(`User not found with email: ${email}`)
 
         if (isInvalidPassword(password)) {
-            const errors = []
-            if (!/(?=.*[a-z])/.test(password)) errors.push('at least one lowercase letter')
-            if (!/(?=.*[A-Z])/.test(password)) errors.push('at least one uppercase letter')
-            if (!/(?=.*\d)/.test(password)) errors.push('at least one number')
-            if (!/(?=.*[^a-zA-Z0-9])/.test(password)) errors.push('at least one special character')
-            if (password.length < 8) errors.push('minimum length of 8 characters')
-            throw new Error(`Invalid password: Must contain ${errors.join(', ')}`)
+            throw new Error('Invalid password')
         }
 
         user.credential = getHash(password)
