@@ -37,7 +37,7 @@ export class StripeManager {
         }
     }
 
-    public async getProductIdFromSubscription(subscriptionId: string, withoutCache: boolean = false) {
+    public async getProductIdFromSubscription(subscriptionId: string) {
         if (!subscriptionId || subscriptionId.trim() === '') {
             return ''
         }
@@ -46,11 +46,9 @@ export class StripeManager {
             throw new Error('Stripe is not initialized')
         }
 
-        if (!withoutCache) {
-            const subscriptionData = await this.cacheManager.getSubscriptionDataFromCache(subscriptionId)
-            if (subscriptionData?.productId) {
-                return subscriptionData.productId
-            }
+        const subscriptionData = await this.cacheManager.getSubscriptionDataFromCache(subscriptionId)
+        if (subscriptionData?.productId) {
+            return subscriptionData.productId
         }
 
         try {
@@ -72,47 +70,6 @@ export class StripeManager {
         }
     }
 
-    public async createStripeUserAndSubscribe(email: string, planId: string, referral?: string) {
-        if (!this.stripe) {
-            throw new Error('Stripe is not initialized')
-        }
-        if (!email) {
-            throw new Error('Email is required')
-        }
-        if (!planId) {
-            throw new Error('Plan id is required')
-        }
-
-        const customer = await this.stripe.customers.create({
-            email,
-            metadata: referral ? { referral } : undefined
-        })
-
-        const prices = await this.stripe.prices.list({
-            product: planId,
-            active: true,
-            limit: 1
-        })
-        if (prices.data.length === 0) {
-            throw new Error('No active price found for the selected plan')
-        }
-
-        const subscription = await this.stripe.subscriptions.create({
-            customer: customer.id,
-            items: [
-                {
-                    price: prices.data[0].id
-                }
-            ]
-        })
-
-        await this.cacheManager.updateSubscriptionDataToCache(subscription.id, {
-            productId: planId,
-            subsriptionDetails: this.getSubscriptionObject(subscription)
-        })
-
-        return { customerId: customer.id, subscriptionId: subscription.id }
-    }
 
     public async getFeaturesByPlan(subscriptionId: string, withoutCache: boolean = false) {
         if (!this.stripe || !subscriptionId) {

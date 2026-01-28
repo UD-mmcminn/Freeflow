@@ -28,7 +28,7 @@ import { Platform } from './Interface'
 import { StripeManager } from './StripeManager'
 import { IAM_FEATURE_FLAGS } from './utils/quotaUsage'
 import { getRunningExpressApp } from './utils/getRunningExpressApp'
-import { UsageCacheManager } from './UsageCacheManager'
+import BillingManager from './iam/billing/BillingManager'
 
 const ALL_SSO_PROVIDERS = ['azure', 'google', 'auth0', 'github']
 
@@ -37,6 +37,7 @@ type FeatureFlags = Record<string, string>
 export class IdentityManager {
     private static instance: IdentityManager
     private stripeManager?: StripeManager
+    private billingManager?: BillingManager
     permissions: Permissions
     ssoProviderName: string = ''
     currentInstancePlatform: Platform = Platform.IAM
@@ -62,6 +63,7 @@ export class IdentityManager {
         this.permissions = new Permissions()
         if (process.env.STRIPE_SECRET_KEY) {
             this.stripeManager = await StripeManager.getInstance()
+            this.billingManager = new BillingManager(this.stripeManager)
         }
     }
 
@@ -112,29 +114,27 @@ export class IdentityManager {
     }
 
     public async createStripeCustomerPortalSession(req: Request): Promise<{ url: string }> {
-        if (!this.stripeManager) {
-            throw new Error('Stripe is not initialized')
+        if (!this.billingManager) {
+            throw new Error('Billing is not initialized')
         }
-        return this.stripeManager.createStripeCustomerPortalSession(req)
+        return this.billingManager.createStripeCustomerPortalSession(req)
     }
 
     public async createStripeUserAndSubscribe(email: string, planId: string, referral?: string) {
-        if (!this.stripeManager) {
-            throw new Error('Stripe is not initialized')
+        if (!this.billingManager) {
+            throw new Error('Billing is not initialized')
         }
-        const result = await this.stripeManager.createStripeUserAndSubscribe(email, planId, referral)
-        await this.refreshSubscriptionCache(result.subscriptionId)
-        return result
+        return this.billingManager.createStripeUserAndSubscribe(email, planId, referral)
     }
 
     public async updateSubscriptionPlan(req: Request, subscriptionId: string, newPlanId: string, prorationDate: number) {
-        if (!this.stripeManager) {
-            throw new Error('Stripe is not initialized')
+        if (!this.billingManager) {
+            throw new Error('Billing is not initialized')
         }
-        const result = await this.stripeManager.updateSubscriptionPlan(subscriptionId, newPlanId, prorationDate)
-        await this.refreshSubscriptionCache(subscriptionId)
-        const productId = await this.stripeManager.getProductIdFromSubscription(subscriptionId, true)
-        const features = await this.getFeaturesByPlan(subscriptionId)
+        const result = await this.billingManager.updateSubscriptionPlan(subscriptionId, newPlanId, prorationDate)
+        const cacheState = result.cacheState ?? (await this.refreshSubscriptionCache(subscriptionId))
+        const productId = cacheState?.productId ?? (await this.getProductIdFromSubscription(subscriptionId))
+        const features = cacheState?.features ?? (await this.getFeaturesByPlan(subscriptionId))
         this.updateSessionUser(req, {
             activeOrganizationProductId: productId,
             features
@@ -143,12 +143,24 @@ export class IdentityManager {
     }
 
     public async updateAdditionalSeats(subscriptionId: string, quantity: number, prorationDate: number) {
-        if (!this.stripeManager) {
-            throw new Error('Stripe is not initialized')
+        if (!this.billingManager) {
+            throw new Error('Billing is not initialized')
         }
-        const result = await this.stripeManager.updateAdditionalSeats(subscriptionId, quantity, prorationDate)
-        await this.refreshSubscriptionCache(subscriptionId)
-        return result
+        return this.billingManager.updateAdditionalSeats(subscriptionId, quantity, prorationDate)
+    }
+
+    public async getPlanProration(subscriptionId: string, newPlanId: string) {
+        if (!this.billingManager) {
+            throw new Error('Billing is not initialized')
+        }
+        return this.billingManager.getPlanProration(subscriptionId, newPlanId)
+    }
+
+    public async getAdditionalSeatsProration(subscriptionId: string, newQuantity: number) {
+        if (!this.billingManager) {
+            throw new Error('Billing is not initialized')
+        }
+        return this.billingManager.getAdditionalSeatsProration(subscriptionId, newQuantity)
     }
 
     public async getRefreshToken(providerName: string, refreshToken: string) {
@@ -159,14 +171,14 @@ export class IdentityManager {
         return provider.refreshToken(refreshToken)
     }
 
-    private async refreshSubscriptionCache(subscriptionId: string): Promise<void> {
-        if (!subscriptionId || !this.stripeManager || this.currentInstancePlatform !== Platform.CLOUD) {
-            return
+    public async refreshSubscriptionCache(subscriptionId: string) {
+        if (!subscriptionId || this.currentInstancePlatform !== Platform.CLOUD) {
+            return undefined
         }
-        const cacheManager = await UsageCacheManager.getInstance()
-        await cacheManager.getQuotas(subscriptionId, true)
-        await this.stripeManager.getFeaturesByPlan(subscriptionId, true)
-        await this.stripeManager.getProductIdFromSubscription(subscriptionId, true)
+        if (!this.billingManager) {
+            throw new Error('Billing is not initialized')
+        }
+        return this.billingManager.refreshSubscriptionCache(subscriptionId)
     }
 
     private updateSessionUser(req: Request, updates: Partial<Record<string, any>>): void {
@@ -271,13 +283,13 @@ export class IdentityManager {
                     return
                 }
                 const subscriptionId = req.user?.activeOrganizationSubscriptionId ?? ''
-                const featureFlags = req.user?.features ?? (await identityManager.getFeaturesByPlan(subscriptionId))
+                const featureFlags = await identityManager.getFeaturesByPlan(subscriptionId)
                 if (!featureFlags || Object.keys(featureFlags).length === 0) {
                     res.status(StatusCodes.FORBIDDEN).json({ message: ErrorMessage.FORBIDDEN })
                     return
                 }
                 const flagValue = featureFlags[featureKey]
-                const isEnabled = flagValue === true || flagValue === 'true' || flagValue === '1'
+                const isEnabled = flagValue === 'true' || flagValue === '1'
                 if (!isEnabled) {
                     res.status(StatusCodes.FORBIDDEN).json({ message: ErrorMessage.FORBIDDEN })
                     return

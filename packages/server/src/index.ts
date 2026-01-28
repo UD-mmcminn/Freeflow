@@ -155,7 +155,14 @@ export class App {
     async config() {
         // Limit is needed to allow sending/receiving base64 encoded string
         const flowise_file_size_limit = process.env.FLOWISE_FILE_SIZE_LIMIT || '50mb'
-        this.app.use(express.json({ limit: flowise_file_size_limit }))
+        this.app.use(
+            express.json({
+                limit: flowise_file_size_limit,
+                verify: (req: any, _res, buf) => {
+                    req.rawBody = buf
+                }
+            })
+        )
         this.app.use(express.urlencoded({ limit: flowise_file_size_limit, extended: true }))
 
         // Enhanced trust proxy settings for load balancer
