@@ -21,6 +21,7 @@ import { Workspace } from '../iam/database/entities/workspace.entity'
 import { getWorkspaceSearchOptions } from '../iam/utils/ControllerServiceUtils'
 import { InternalFlowiseError } from '../errors/internalFlowiseError'
 import { getErrorMessage } from '../errors/utils'
+import logger from '../utils/logger'
 import {
     buildFlow,
     constructGraphs,
@@ -33,7 +34,6 @@ import {
     getTelemetryFlowObj
 } from '../utils'
 import { getRunningExpressApp } from '../utils/getRunningExpressApp'
-import logger from '../utils/logger'
 import { OMIT_QUEUE_JOB_DATA } from './constants'
 import { validateFileMimeTypeAndExtensionMatch } from './fileValidation'
 import { checkStorage, updateStorageUsage } from './quotaUsage'
