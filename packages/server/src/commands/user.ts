@@ -63,7 +63,9 @@ export default class user extends BaseCommand {
         })
         if (!user) throw new Error(`User not found with email: ${email}`)
 
-        validatePasswordOrThrow(password)
+        if (isInvalidPassword(password)) {
+            throw new Error('Invalid password')
+        }
 
         user.credential = getHash(password)
         await queryRunner.manager.save(user)
